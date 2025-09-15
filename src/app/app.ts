@@ -1,11 +1,10 @@
 import { Component, signal } from '@angular/core';
 import { SearchComponent } from './components/search/search.component';
-import { ThemeToggleComponent } from './components/theme-toggle/theme-toggle.component';
-import { ColorSelectorComponent } from './components/color-selector/color-selector.component';
+import { SettingsComponent } from './components/settings/settings.component';
 
 @Component({
   selector: 'app-root',
-  imports: [SearchComponent, ThemeToggleComponent, ColorSelectorComponent],
+  imports: [SearchComponent, SettingsComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
