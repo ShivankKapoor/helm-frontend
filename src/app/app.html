@@ -2,8 +2,23 @@
 <app-settings></app-settings>
 
 <!-- Account button placed to the right of the settings button -->
-<button class="account-button" title="Account" aria-label="Account">
-  <i class="bi-person-circle" aria-hidden="true"></i>
+<button 
+  class="account-button" 
+  title="Account" 
+  aria-label="Account"
+  (click)="authService.authenticated() ? signOut() : openSignInPopup()"
+>
+  <i [class]="authService.authenticated() ? 'bi-person-check-fill' : 'bi-person-circle'" aria-hidden="true"></i>
 </button>
+
+<!-- Sign-in popup -->
+<app-sign-in-popup 
+  #signInPopup
+  *ngIf="showSignInPopup()"
+  (close)="closeSignInPopup()"
+  (signIn)="handleSignIn($event)"
+  (switchToSignUpEvent)="handleSwitchToSignUp()"
+  (forgotPasswordEvent)="handleForgotPassword()"
+></app-sign-in-popup>
 
 <div class="footer">Powered by Google</div>
