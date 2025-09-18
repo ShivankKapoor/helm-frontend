@@ -2,7 +2,7 @@ import { Injectable, signal, Inject, forwardRef } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, of } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
-import { AppConfig, DEFAULT_GUEST_CONFIG, DEFAULT_USER_CONFIG, UserConfig } from '../models/config.model';
+import { AppConfig, DEFAULT_GUEST_CONFIG, DEFAULT_USER_CONFIG, UserConfig, QuickLinkConfig, QuickLinksConfig } from '../models/config.model';
 
 @Injectable({
   providedIn: 'root'
@@ -269,7 +269,7 @@ export class ConfigService {
    * Merge configuration with defaults to ensure all required properties exist
    */
   private mergeWithDefaults(config: Partial<AppConfig>, defaults: AppConfig): AppConfig {
-    return {
+    const merged = {
       ...defaults,
       ...config,
       user: {
@@ -282,9 +282,27 @@ export class ConfigService {
         color: {
           ...defaults.user.color,
           ...config.user?.color
+        },
+        quickLinks: {
+          ...defaults.user.quickLinks,
+          ...config.user?.quickLinks,
+          links: config.user?.quickLinks?.links || defaults.user.quickLinks.links
         }
       }
     };
+
+    // Migrate any bottom-right links to top-right (reserved for settings)
+    if (merged.user.quickLinks.links.length > 0) {
+      merged.user.quickLinks.links = merged.user.quickLinks.links.map(link => {
+        if ((link.corner as string) === 'bottom-right') {
+          console.log(`Migrating quick link "${link.text}" from bottom-right to top-right (reserved for settings)`);
+          return { ...link, corner: 'top-right' as const };
+        }
+        return link;
+      });
+    }
+
+    return merged;
   }
 
   /**
@@ -321,6 +339,140 @@ export class ConfigService {
     this.updateUserConfig({
       color: { selectedColor }
     });
+  }
+
+  /**
+   * Update quick links configuration
+   */
+  updateQuickLinks(quickLinks: QuickLinksConfig): void {
+    this.updateUserConfig({
+      quickLinks
+    });
+  }
+
+  /**
+   * Add a new quick link
+   */
+  addQuickLink(linkData: Omit<QuickLinkConfig, 'id' | 'order'>): void {
+    const currentConfig = this.currentConfig;
+    const currentLinks = currentConfig.user.quickLinks.links;
+    
+    // Check if we've reached the maximum
+    if (currentLinks.length >= currentConfig.user.quickLinks.maxLinks) {
+      console.warn(`Cannot add more quick links. Maximum of ${currentConfig.user.quickLinks.maxLinks} reached.`);
+      return;
+    }
+
+    // Prevent bottom-right placement (reserved for settings)
+    if ((linkData.corner as string) === 'bottom-right') {
+      console.warn('Bottom-right corner is reserved for settings. Defaulting to top-right.');
+      linkData = { ...linkData, corner: 'top-right' };
+    }
+
+    // Generate unique ID
+    const id = 'ql_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    
+    // Calculate order (for positioning multiple links in same corner)
+    const sameCornerLinks = currentLinks.filter(link => link.corner === linkData.corner);
+    const order = sameCornerLinks.length;
+
+    const newLink: QuickLinkConfig = {
+      ...linkData,
+      id,
+      order
+    };
+
+    const updatedQuickLinks: QuickLinksConfig = {
+      ...currentConfig.user.quickLinks,
+      links: [...currentLinks, newLink]
+    };
+
+    this.updateQuickLinks(updatedQuickLinks);
+  }
+
+  /**
+   * Update an existing quick link
+   */
+  updateQuickLink(id: string, updates: Partial<Omit<QuickLinkConfig, 'id'>>): void {
+    const currentConfig = this.currentConfig;
+    const currentLinks = currentConfig.user.quickLinks.links;
+    
+    const linkIndex = currentLinks.findIndex(link => link.id === id);
+    if (linkIndex === -1) {
+      console.warn(`Quick link with id ${id} not found`);
+      return;
+    }
+
+    const updatedLinks = [...currentLinks];
+    updatedLinks[linkIndex] = { ...updatedLinks[linkIndex], ...updates };
+
+    // If corner changed, recalculate order for the new corner
+    if (updates.corner && updates.corner !== currentLinks[linkIndex].corner) {
+      const sameCornerLinks = updatedLinks.filter(link => 
+        link.corner === updates.corner && link.id !== id
+      );
+      updatedLinks[linkIndex].order = sameCornerLinks.length;
+    }
+
+    const updatedQuickLinks: QuickLinksConfig = {
+      ...currentConfig.user.quickLinks,
+      links: updatedLinks
+    };
+
+    this.updateQuickLinks(updatedQuickLinks);
+  }
+
+  /**
+   * Remove a quick link
+   */
+  removeQuickLink(id: string): void {
+    const currentConfig = this.currentConfig;
+    const currentLinks = currentConfig.user.quickLinks.links;
+    
+    const linkToRemove = currentLinks.find(link => link.id === id);
+    if (!linkToRemove) {
+      console.warn(`Quick link with id ${id} not found`);
+      return;
+    }
+
+    // Filter out the link and reorder remaining links in the same corner
+    const updatedLinks = currentLinks
+      .filter(link => link.id !== id)
+      .map(link => {
+        if (link.corner === linkToRemove.corner && link.order > linkToRemove.order) {
+          return { ...link, order: link.order - 1 };
+        }
+        return link;
+      });
+
+    const updatedQuickLinks: QuickLinksConfig = {
+      ...currentConfig.user.quickLinks,
+      links: updatedLinks
+    };
+
+    this.updateQuickLinks(updatedQuickLinks);
+  }
+
+  /**
+   * Toggle quick links enabled state
+   */
+  toggleQuickLinks(enabled: boolean): void {
+    const currentConfig = this.currentConfig;
+    const updatedQuickLinks: QuickLinksConfig = {
+      ...currentConfig.user.quickLinks,
+      enabled
+    };
+    this.updateQuickLinks(updatedQuickLinks);
+  }
+
+  /**
+   * Get quick links for a specific corner, sorted by order
+   */
+  getQuickLinksForCorner(corner: QuickLinkConfig['corner']): QuickLinkConfig[] {
+    const currentConfig = this.currentConfig;
+    return currentConfig.user.quickLinks.links
+      .filter(link => link.corner === corner && link.enabled)
+      .sort((a, b) => a.order - b.order);
   }
 
   /**

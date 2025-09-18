@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { SearchComponent } from './components/search/search.component';
 import { SettingsComponent } from './components/settings/settings.component';
 import { SignInPopupComponent } from './components/account/sign-in-popup.component';
+import { QuickLinkComponent } from './components/quick-link/quick-link.component';
 import { AuthService } from './services/auth.service';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, SearchComponent, SettingsComponent, SignInPopupComponent],
+  imports: [CommonModule, SearchComponent, SettingsComponent, SignInPopupComponent, QuickLinkComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })

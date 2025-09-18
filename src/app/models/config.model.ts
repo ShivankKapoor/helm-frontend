@@ -13,9 +13,25 @@ export interface ColorConfig {
   selectedColor: string; // This will store the color value (e.g., '#1a73e8,#155ab6')
 }
 
+export interface QuickLinkConfig {
+  id: string; // Unique identifier for each quick link
+  enabled: boolean;
+  text: string;
+  url: string;
+  corner: 'top-left' | 'top-right' | 'bottom-left'; // bottom-right reserved for settings
+  order: number; // For positioning multiple links in the same corner
+}
+
+export interface QuickLinksConfig {
+  enabled: boolean; // Global enable/disable for all quick links
+  links: QuickLinkConfig[]; // Array of quick links
+  maxLinks: number; // Maximum number of links allowed
+}
+
 export interface UserConfig {
   theme: ThemeConfig;
   color: ColorConfig;
+  quickLinks: QuickLinksConfig; // Changed from quickLink to quickLinks
   // Future user preferences can go here
   preferences?: {
     language?: string;
@@ -47,7 +63,12 @@ export const DEFAULT_COLOR_OPTIONS: ColorOption[] = [
 export const DEFAULT_GUEST_CONFIG: AppConfig = {
   user: {
     theme: { mode: 'light' },
-    color: { selectedColor: DEFAULT_COLOR_OPTIONS[0].value }
+    color: { selectedColor: DEFAULT_COLOR_OPTIONS[0].value },
+    quickLinks: {
+      enabled: false,
+      links: [],
+      maxLinks: 5
+    }
   },
   version: '1.0.0',
   lastUpdated: new Date().toISOString(),
@@ -57,7 +78,12 @@ export const DEFAULT_GUEST_CONFIG: AppConfig = {
 export const DEFAULT_USER_CONFIG: AppConfig = {
   user: {
     theme: { mode: 'light' },
-    color: { selectedColor: DEFAULT_COLOR_OPTIONS[0].value }
+    color: { selectedColor: DEFAULT_COLOR_OPTIONS[0].value },
+    quickLinks: {
+      enabled: false,
+      links: [],
+      maxLinks: 5
+    }
   },
   version: '1.0.0',
   lastUpdated: new Date().toISOString(),
