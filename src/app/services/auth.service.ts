@@ -1,4 +1,5 @@
 import { Injectable, signal } from '@angular/core';
+import { ConfigService } from './config.service';
 
 export interface User {
   id: string;
@@ -30,7 +31,7 @@ export class AuthService {
   readonly authenticated = this.isAuthenticated.asReadonly();
   readonly loading = this.isLoading.asReadonly();
 
-  constructor() {
+  constructor(private configService: ConfigService) {
     // Check for existing session on initialization
     this.checkExistingSession();
   }
@@ -53,7 +54,7 @@ export class AuthService {
           name: this.extractNameFromEmail(credentials.email)
         };
 
-        this.setCurrentUser(user);
+        await this.setCurrentUser(user);
         this.saveSession(user);
 
         return { success: true, user };
@@ -77,20 +78,20 @@ export class AuthService {
   /**
    * Sign out the current user
    */
-  signOut(): void {
-    this.clearCurrentUser();
+  async signOut(): Promise<void> {
+    await this.clearCurrentUser();
     this.clearSession();
   }
 
   /**
    * Check if there's an existing session
    */
-  private checkExistingSession(): void {
+  private async checkExistingSession(): Promise<void> {
     try {
       const savedUser = localStorage.getItem('helm_user');
       if (savedUser) {
         const user: User = JSON.parse(savedUser);
-        this.setCurrentUser(user);
+        await this.setCurrentUser(user);
       }
     } catch (error) {
       console.error('Error checking existing session:', error);
@@ -101,15 +102,21 @@ export class AuthService {
   /**
    * Set the current user and update authentication state
    */
-  private setCurrentUser(user: User): void {
+  private async setCurrentUser(user: User): Promise<void> {
     this.currentUser.set(user);
     this.isAuthenticated.set(true);
+    
+    // Notify config service about user sign in
+    await this.configService.onUserSignIn(user.id);
   }
 
   /**
    * Clear the current user and update authentication state
    */
-  private clearCurrentUser(): void {
+  private async clearCurrentUser(): Promise<void> {
+    // Notify config service about user sign out
+    await this.configService.onUserSignOut();
+    
     this.currentUser.set(null);
     this.isAuthenticated.set(false);
   }
