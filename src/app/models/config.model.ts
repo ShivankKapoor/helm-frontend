@@ -13,6 +13,18 @@ export interface ColorConfig {
   selectedColor: string; // This will store the color value (e.g., '#1a73e8,#155ab6')
 }
 
+export interface SearchEngineConfig {
+  selectedEngine: string; // The key of the selected search engine
+  customEngines?: SearchEngine[]; // User-defined custom search engines
+}
+
+export interface SearchEngine {
+  name: string;
+  key: string;
+  url: string; // URL template with {query} placeholder
+  icon?: string; // Optional icon class
+}
+
 export interface QuickLinkConfig {
   id: string; // Unique identifier for each quick link
   enabled: boolean;
@@ -31,6 +43,7 @@ export interface QuickLinksConfig {
 export interface UserConfig {
   theme: ThemeConfig;
   color: ColorConfig;
+  searchEngine: SearchEngineConfig;
   quickLinks: QuickLinksConfig; // Changed from quickLink to quickLinks
   // Future user preferences can go here
   preferences?: {
@@ -59,11 +72,54 @@ export const DEFAULT_COLOR_OPTIONS: ColorOption[] = [
   { name: 'Orange', value: '#FF6720,#CC4F00', bg: '#FF6720', hover: '#CC4F00' }
 ];
 
+// Default search engines
+export const DEFAULT_SEARCH_ENGINES: SearchEngine[] = [
+  { 
+    name: 'Google', 
+    key: 'google', 
+    url: 'https://www.google.com/search?q={query}',
+    icon: 'bi bi-google'
+  },
+  { 
+    name: 'Bing', 
+    key: 'bing', 
+    url: 'https://www.bing.com/search?q={query}',
+    icon: 'bi bi-microsoft'
+  },
+  { 
+    name: 'DuckDuckGo', 
+    key: 'duckduckgo', 
+    url: 'https://duckduckgo.com/?q={query}',
+    icon: 'bi bi-shield-check'
+  },
+  { 
+    name: 'Yahoo', 
+    key: 'yahoo', 
+    url: 'https://search.yahoo.com/search?p={query}',
+    icon: 'bi bi-search'
+  },
+  { 
+    name: 'Ecosia', 
+    key: 'ecosia', 
+    url: 'https://www.ecosia.org/search?q={query}',
+    icon: 'bi bi-tree'
+  },
+  { 
+    name: 'Startpage', 
+    key: 'startpage', 
+    url: 'https://www.startpage.com/do/dsearch?query={query}',
+    icon: 'bi bi-incognito'
+  }
+];
+
 // Default configurations
 export const DEFAULT_GUEST_CONFIG: AppConfig = {
   user: {
     theme: { mode: 'light' },
     color: { selectedColor: DEFAULT_COLOR_OPTIONS[0].value },
+    searchEngine: {
+      selectedEngine: 'google'
+    },
     quickLinks: {
       enabled: false,
       links: [],
@@ -79,6 +135,9 @@ export const DEFAULT_USER_CONFIG: AppConfig = {
   user: {
     theme: { mode: 'light' },
     color: { selectedColor: DEFAULT_COLOR_OPTIONS[0].value },
+    searchEngine: {
+      selectedEngine: 'google'
+    },
     quickLinks: {
       enabled: false,
       links: [],

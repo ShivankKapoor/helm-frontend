@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { ThemeService } from '../../services/theme.service';
 import { ColorService } from '../../services/color.service';
 import { ConfigService } from '../../services/config.service';
-import { QuickLinkConfig, QuickLinksConfig } from '../../models/config.model';
+import { QuickLinkConfig, QuickLinksConfig, SearchEngine } from '../../models/config.model';
 import { QuickLinkSettingsComponent } from '../quick-link-settings/quick-link-settings.component';
 
 @Component({
@@ -46,6 +46,20 @@ import { QuickLinkSettingsComponent } from '../quick-link-settings/quick-link-se
               >
                 @for (color of colorService.colors; track color.name) {
                   <option [value]="color.value">{{ color.name }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Search Engine Section -->
+            <div class="setting-section">
+              <label>Search Engine</label>
+              <select 
+                class="search-engine-dropdown" 
+                [(ngModel)]="selectedSearchEngine"
+                (ngModelChange)="onSearchEngineChange($event)"
+              >
+                @for (engine of availableSearchEngines; track engine.key) {
+                  <option [value]="engine.key">{{ engine.name }}</option>
                 }
               </select>
             </div>
@@ -127,6 +141,24 @@ import { QuickLinkSettingsComponent } from '../quick-link-settings/quick-link-se
       margin-bottom: 0.5rem;
       font-weight: 600;
       color: var(--text-color, #333);
+    }
+    
+    .color-selector-dropdown, .search-engine-dropdown {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--border-color, #ccc);
+      border-radius: 6px;
+      background: var(--input-bg, white);
+      color: var(--text-color, #333);
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: border-color 0.2s ease;
+    }
+    
+    .color-selector-dropdown:focus, .search-engine-dropdown:focus {
+      outline: none;
+      border-color: var(--button-bg, #1a73e8);
+      box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.1);
     }
     
     .toggle-row {
@@ -245,6 +277,13 @@ import { QuickLinkSettingsComponent } from '../quick-link-settings/quick-link-se
       color: var(--text-color, #e0e0e0);
     }
     
+    :host-context(.dark) .color-selector-dropdown,
+    :host-context(.dark) .search-engine-dropdown {
+      background: var(--input-bg, #2a2a2a);
+      border-color: var(--border-color, #444);
+      color: var(--text-color, #e0e0e0);
+    }
+    
     :host-context(.dark) .toggle-row {
       color: var(--text-color, #e0e0e0);
     }
@@ -288,13 +327,24 @@ export class SettingsComponent {
   maxQuickLinks = 5;
   editingLinkId: string | null = null;
 
+  // Search Engine properties
+  availableSearchEngines: SearchEngine[] = [];
+  selectedSearchEngine = 'google';
+
   constructor() {
-    // Subscribe to config changes to populate quick links settings
+    // Load available search engines
+    this.availableSearchEngines = this.configService.getAvailableSearchEngines();
+    
+    // Subscribe to config changes to populate settings
     this.configService.config$.subscribe(config => {
       if (config?.user?.quickLinks) {
         this.quickLinksEnabled = config.user.quickLinks.enabled;
         this.quickLinksList = [...config.user.quickLinks.links];
         this.maxQuickLinks = config.user.quickLinks.maxLinks;
+      }
+      
+      if (config?.user?.searchEngine) {
+        this.selectedSearchEngine = config.user.searchEngine.selectedEngine;
       }
     });
   }
@@ -325,6 +375,10 @@ export class SettingsComponent {
 
   onColorChange(value: string) {
     this.colorService.setColor(value);
+  }
+
+  onSearchEngineChange(engineKey: string) {
+    this.configService.updateSearchEngine(engineKey);
   }
 
   // Quick Links methods

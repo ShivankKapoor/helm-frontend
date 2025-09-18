@@ -2,7 +2,7 @@ import { Injectable, signal, Inject, forwardRef } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, of } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
-import { AppConfig, DEFAULT_GUEST_CONFIG, DEFAULT_USER_CONFIG, UserConfig, QuickLinkConfig, QuickLinksConfig } from '../models/config.model';
+import { AppConfig, DEFAULT_GUEST_CONFIG, DEFAULT_USER_CONFIG, UserConfig, QuickLinkConfig, QuickLinksConfig, SearchEngineConfig, DEFAULT_SEARCH_ENGINES } from '../models/config.model';
 
 @Injectable({
   providedIn: 'root'
@@ -283,6 +283,10 @@ export class ConfigService {
           ...defaults.user.color,
           ...config.user?.color
         },
+        searchEngine: {
+          ...defaults.user.searchEngine,
+          ...config.user?.searchEngine
+        },
         quickLinks: {
           ...defaults.user.quickLinks,
           ...config.user?.quickLinks,
@@ -339,6 +343,39 @@ export class ConfigService {
     this.updateUserConfig({
       color: { selectedColor }
     });
+  }
+
+  /**
+   * Update search engine configuration
+   */
+  updateSearchEngine(selectedEngine: string): void {
+    this.updateUserConfig({
+      searchEngine: { selectedEngine }
+    });
+  }
+
+  /**
+   * Get available search engines
+   */
+  getAvailableSearchEngines() {
+    return DEFAULT_SEARCH_ENGINES;
+  }
+
+  /**
+   * Get current search engine
+   */
+  getCurrentSearchEngine() {
+    const currentConfig = this.currentConfig;
+    const selectedKey = currentConfig.user.searchEngine.selectedEngine;
+    return DEFAULT_SEARCH_ENGINES.find(engine => engine.key === selectedKey) || DEFAULT_SEARCH_ENGINES[0];
+  }
+
+  /**
+   * Generate search URL for a query
+   */
+  generateSearchUrl(query: string): string {
+    const searchEngine = this.getCurrentSearchEngine();
+    return searchEngine.url.replace('{query}', encodeURIComponent(query));
   }
 
   /**

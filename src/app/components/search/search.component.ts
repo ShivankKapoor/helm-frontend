@@ -1,19 +1,20 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { ConfigService } from '../../services/config.service';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-search',
-  imports: [],
+  imports: [FormsModule],
   template: `
     <form
       class="search-box"
-      action="https://www.google.com/search"
-      method="GET"
+      (ngSubmit)="onSearch()"
       autocomplete="off"
     >
       <input
         type="text"
-        name="q"
-        placeholder="Search Google..."
+        [(ngModel)]="searchQuery"
+        [placeholder]="searchPlaceholder"
         required
       />
       <button type="submit">Search</button>
@@ -22,5 +23,18 @@ import { Component } from '@angular/core';
   styles: ``
 })
 export class SearchComponent {
-
+  configService = inject(ConfigService);
+  searchQuery = '';
+  
+  get searchPlaceholder(): string {
+    const currentEngine = this.configService.getCurrentSearchEngine();
+    return `Search ${currentEngine.name}...`;
+  }
+  
+  onSearch() {
+    if (this.searchQuery.trim()) {
+      const searchUrl = this.configService.generateSearchUrl(this.searchQuery.trim());
+      window.open(searchUrl, '_blank');
+    }
+  }
 }
