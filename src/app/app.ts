@@ -3,19 +3,23 @@ import { CommonModule } from '@angular/common';
 import { SearchComponent } from './components/search/search.component';
 import { SettingsComponent } from './components/settings/settings.component';
 import { SignInPopupComponent } from './components/account/sign-in-popup.component';
+import { UserInfoPopupComponent } from './components/account/user-info-popup.component';
 import { QuickLinkComponent } from './components/quick-link/quick-link.component';
 import { AccountService } from './services/account.service';
 import { ConfigService } from './services/config.service';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, SearchComponent, SettingsComponent, SignInPopupComponent, QuickLinkComponent],
+  imports: [CommonModule, SearchComponent, SettingsComponent, SignInPopupComponent, UserInfoPopupComponent, QuickLinkComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
 export class App {
   protected readonly title = signal('helm-frontend');
   protected readonly showSignInPopup = signal(false);
+  protected readonly showUserInfoPopup = signal(false);
+  protected readonly currentUsername = signal<string | null>(null);
+  protected readonly currentUserId = signal<string | null>(null);
 
   @ViewChild(SignInPopupComponent) signInPopup?: SignInPopupComponent;
 
@@ -35,6 +39,37 @@ export class App {
     this.showSignInPopup.set(false);
   }
 
+  openUserInfoPopup() {
+    this.showUserInfoPopup.set(true);
+    this.loadUserInfo(); // Load user info when popup opens
+  }
+
+  closeUserInfoPopup() {
+    this.showUserInfoPopup.set(false);
+  }
+
+  async loadUserInfo() {
+    if (this.accountService.isAuthenticated()) {
+      try {
+        const userInfo = await this.accountService.getCurrentUserInfo();
+        if (userInfo) {
+          this.currentUsername.set(userInfo.username || null);
+          this.currentUserId.set(userInfo.userId || null);
+        }
+      } catch (error) {
+        console.error('Error loading user info:', error);
+      }
+    }
+  }
+
+  handleAccountButtonClick() {
+    if (this.accountService.isAuthenticated()) {
+      this.openUserInfoPopup();
+    } else {
+      this.openSignInPopup();
+    }
+  }
+
   async handleSignIn(credentials: { username: string; password: string }) {
     try {
       console.log('Starting login process...');
@@ -48,6 +83,9 @@ export class App {
         // Login successful - mark as authenticated locally
         this.configService.setUserAuthenticated(userId);
         console.log('Local config updated to mark user as authenticated');
+        
+        // Load user info after successful login
+        await this.loadUserInfo();
         
         // Automatically sync config from server after login
         try {
@@ -88,12 +126,21 @@ export class App {
       // Logout from server (no config syncing)
       await this.accountService.logout().toPromise();
       
+      // Clear user info
+      this.currentUsername.set(null);
+      this.currentUserId.set(null);
+      
       // Handle config service logout
       await this.configService.onUserSignOut();
     } catch (error) {
       console.error('Logout error:', error);
       // Force logout even if API call fails
       this.accountService.forceLogout();
+      
+      // Clear user info
+      this.currentUsername.set(null);
+      this.currentUserId.set(null);
+      
       await this.configService.onUserSignOut();
     }
   }

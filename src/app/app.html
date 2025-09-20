@@ -6,7 +6,7 @@
   class="account-button" 
   title="Account" 
   aria-label="Account"
-  (click)="accountService.isAuthenticated() ? signOut() : openSignInPopup()"
+  (click)="handleAccountButtonClick()"
 >
   <i [class]="accountService.isAuthenticated() ? 'bi-person-check-fill' : 'bi-person-circle'" aria-hidden="true"></i>
 </button>
@@ -23,5 +23,13 @@
   (switchToSignUpEvent)="handleSwitchToSignUp()"
   (forgotPasswordEvent)="handleForgotPassword()"
 ></app-sign-in-popup>
+
+<!-- User info popup -->
+<app-user-info-popup
+  *ngIf="showUserInfoPopup()"
+  [username]="currentUsername()"
+  (close)="closeUserInfoPopup()"
+  (logout)="signOut()"
+></app-user-info-popup>
 
 <div class="footer">Powered by Google</div>

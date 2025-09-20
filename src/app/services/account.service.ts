@@ -3,7 +3,7 @@ const API_BASE_URL = 'http://localhost:8080';
 
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, BehaviorSubject, tap } from 'rxjs';
+import { Observable, BehaviorSubject, tap, catchError } from 'rxjs';
 
 // API Response Interfaces
 interface ApiResponse {
@@ -60,6 +60,9 @@ export class AccountService {
   private sessionTokenKey = 'helm-session-token';
   private isLoggedInSubject = new BehaviorSubject<boolean>(this.hasValidSession());
   public isLoggedIn$ = this.isLoggedInSubject.asObservable();
+  
+  // Cache for user info
+  private cachedUserInfo: { username?: string; userId?: string } | null = null;
 
   constructor(private http: HttpClient) { }
 
@@ -121,10 +124,13 @@ export class AccountService {
    */
   private getAuthHeaders(): HttpHeaders {
     const token = this.getStoredSessionToken();
-    return new HttpHeaders({
+    console.log('Creating auth headers - token found:', !!token, 'token length:', token?.length);
+    const headers = new HttpHeaders({
       'Content-Type': 'application/json',
       ...(token && { 'sessionToken': token })
     });
+    console.log('Auth headers created:', headers.keys());
+    return headers;
   }
 
   /**
@@ -166,6 +172,7 @@ export class AccountService {
       .pipe(
         tap(() => {
           this.clearSessionToken();
+          this.clearUserInfoCache();
           this.isLoggedInSubject.next(false);
         })
       );
@@ -176,11 +183,18 @@ export class AccountService {
    */
   getUserData(): Observable<UserDataResponse> {
     const headers = this.getAuthHeaders();
-    console.log('Making GET request to /api/get with headers:', headers);
+    console.log('Making GET request to /api/get with headers:', headers.keys());
+    console.log('SessionToken header value:', headers.get('sessionToken'));
     return this.http.get<UserDataResponse>(`${API_BASE_URL}/api/get`, { headers })
       .pipe(
         tap(response => {
           console.log('GET /api/get response:', response);
+        }),
+        catchError((error: any) => {
+          console.error('GET /api/get error:', error);
+          console.error('Error status:', error.status);
+          console.error('Error message:', error.message);
+          throw error;
         })
       );
   }
@@ -202,6 +216,59 @@ export class AccountService {
   }
 
   /**
+   * Get current user's info (username, userId)
+   */
+  async getCurrentUserInfo(): Promise<{ username?: string; userId?: string } | null> {
+    // Return cached info if available
+    if (this.cachedUserInfo) {
+      return this.cachedUserInfo;
+    }
+
+    // If not authenticated, return null
+    if (!this.hasValidSession()) {
+      return null;
+    }
+
+    try {
+      const response = await this.getUserData().toPromise();
+      if (response?.success) {
+        this.cachedUserInfo = {
+          username: response.username,
+          userId: response.userId
+        };
+        return this.cachedUserInfo;
+      }
+    } catch (error) {
+      console.error('Error fetching user info:', error);
+    }
+
+    return null;
+  }
+
+  /**
+   * Get current user's username
+   */
+  async getCurrentUsername(): Promise<string | null> {
+    const userInfo = await this.getCurrentUserInfo();
+    return userInfo?.username || null;
+  }
+
+  /**
+   * Get current user's ID
+   */
+  async getCurrentUserId(): Promise<string | null> {
+    const userInfo = await this.getCurrentUserInfo();
+    return userInfo?.userId || null;
+  }
+
+  /**
+   * Clear cached user info
+   */
+  private clearUserInfoCache(): void {
+    this.cachedUserInfo = null;
+  }
+
+  /**
    * Check API health status
    */
   checkHealth(): Observable<HealthResponse> {
@@ -220,6 +287,7 @@ export class AccountService {
    */
   forceLogout(): void {
     this.clearSessionToken();
+    this.clearUserInfoCache();
     this.isLoggedInSubject.next(false);
   }
 }
