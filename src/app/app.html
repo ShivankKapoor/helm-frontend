@@ -6,9 +6,9 @@
   class="account-button" 
   title="Account" 
   aria-label="Account"
-  (click)="authService.authenticated() ? signOut() : openSignInPopup()"
+  (click)="accountService.isAuthenticated() ? signOut() : openSignInPopup()"
 >
-  <i [class]="authService.authenticated() ? 'bi-person-check-fill' : 'bi-person-circle'" aria-hidden="true"></i>
+  <i [class]="accountService.isAuthenticated() ? 'bi-person-check-fill' : 'bi-person-circle'" aria-hidden="true"></i>
 </button>
 
 <!-- Quick Link Component -->

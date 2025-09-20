@@ -167,8 +167,21 @@ export class QuickLinkComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     // Subscribe to configuration changes
     this.subscription = this.configService.config$.subscribe(config => {
+      console.log('QuickLink component received config update:', config);
       if (config?.user?.quickLinks) {
-        this.quickLinksConfig = { ...config.user.quickLinks };
+        console.log('QuickLinks config received:', config.user.quickLinks);
+        console.log('QuickLinks links:', config.user.quickLinks.links);
+        console.log('QuickLinks links type:', typeof config.user.quickLinks.links);
+        console.log('QuickLinks links isArray:', Array.isArray(config.user.quickLinks.links));
+        
+        this.quickLinksConfig = { 
+          ...config.user.quickLinks,
+          links: Array.isArray(config.user.quickLinks.links) 
+            ? config.user.quickLinks.links 
+            : []
+        };
+        
+        console.log('Final quickLinksConfig set:', this.quickLinksConfig);
       }
     });
   }
@@ -184,6 +197,12 @@ export class QuickLinkComponent implements OnInit, OnDestroy {
    */
   getLinksForCorner(corner: QuickLinkConfig['corner']): QuickLinkConfig[] {
     if (!this.quickLinksConfig.enabled) {
+      return [];
+    }
+    
+    // Ensure links is always an array
+    if (!Array.isArray(this.quickLinksConfig.links)) {
+      console.warn('quickLinksConfig.links is not an array, returning empty array');
       return [];
     }
     

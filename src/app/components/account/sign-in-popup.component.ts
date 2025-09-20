@@ -19,20 +19,23 @@ import { CommonModule } from '@angular/common';
         <div class="signin-content">
           <form (ngSubmit)="onSubmit()" #signInForm="ngForm">
             <div class="form-group">
-              <label for="email">Email</label>
+              <label for="username">Username</label>
               <input
-                type="email"
-                id="email"
-                name="email"
-                [(ngModel)]="email"
+                type="text"
+                id="username"
+                name="username"
+                [(ngModel)]="username"
                 required
-                #emailInput="ngModel"
-                placeholder="Enter your email"
-                autocomplete="email"
+                minlength="3"
+                maxlength="50"
+                #usernameInput="ngModel"
+                placeholder="Enter your username"
+                autocomplete="username"
               />
-              <div *ngIf="emailInput.invalid && emailInput.touched" class="error-message">
-                <span *ngIf="emailInput.errors?.['required']">Email is required</span>
-                <span *ngIf="emailInput.errors?.['email']">Please enter a valid email</span>
+              <div *ngIf="usernameInput.invalid && usernameInput.touched" class="error-message">
+                <span *ngIf="usernameInput.errors?.['required']">Username is required</span>
+                <span *ngIf="usernameInput.errors?.['minlength']">Username must be at least 3 characters</span>
+                <span *ngIf="usernameInput.errors?.['maxlength']">Username must be no more than 50 characters</span>
               </div>
             </div>
 
@@ -93,7 +96,7 @@ import { CommonModule } from '@angular/common';
   styleUrl: './sign-in-popup.component.scss'
 })
 export class SignInPopupComponent {
-  email = '';
+  username = '';
   password = '';
   
   protected readonly showPassword = signal(false);
@@ -102,7 +105,7 @@ export class SignInPopupComponent {
 
   // Output events
   close = output<void>();
-  signIn = output<{ email: string; password: string }>();
+  signIn = output<{ username: string; password: string }>();
   switchToSignUpEvent = output<void>();
   forgotPasswordEvent = output<void>();
 
@@ -117,12 +120,12 @@ export class SignInPopupComponent {
   }
 
   onSubmit() {
-    if (this.email && this.password) {
+    if (this.username && this.password) {
       this.isLoading.set(true);
       this.errorMessage.set('');
       
       // Emit the sign-in event with credentials
-      this.signIn.emit({ email: this.email, password: this.password });
+      this.signIn.emit({ username: this.username, password: this.password });
     }
   }
 
