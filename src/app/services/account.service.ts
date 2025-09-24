@@ -1,5 +1,5 @@
 // API Configuration - Update with your deployed URL
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = 'http://localhost:7666';
 
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
