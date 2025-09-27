@@ -219,9 +219,12 @@ body {
   border-radius: 12px;
   min-width: 400px;
   max-width: 90vw;
+  max-height: 90vh;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
   color: var(--text-color);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .settings-header {
@@ -254,6 +257,33 @@ body {
 
 .settings-content {
   padding: 20px;
+  flex: 1;
+  overflow-y: auto;
+  max-height: calc(90vh - 80px); /* Subtract header height */
+  scroll-behavior: smooth;
+  
+  /* Custom scrollbar styling */
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    
+    &:hover {
+      background: rgba(255, 255, 255, 0.5);
+    }
+  }
+  
+  /* Firefox scrollbar styling */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1);
 }
 
 .setting-section {
@@ -364,6 +394,17 @@ body {
     width: 35px;
     height: 35px;
     font-size: 18px;
+  }
+
+  .settings-modal {
+    min-width: 300px;
+    max-width: 95vw;
+    max-height: 95vh;
+  }
+
+  .settings-content {
+    padding: 16px;
+    max-height: calc(95vh - 70px); /* Adjusted for mobile header */
   }
 }
 
