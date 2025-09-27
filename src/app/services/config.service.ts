@@ -165,6 +165,13 @@ export class ConfigService {
   
   private checkForExternalChanges(): void {
     try {
+      // Skip localStorage change detection if user is authenticated
+      // When authenticated, server sync should be the source of truth
+      if (this.accountService && this.accountService.isAuthenticated()) {
+        console.log('Skipping localStorage change detection - user is authenticated');
+        return;
+      }
+      
       const currentConfigStr = localStorage.getItem(this.GUEST_CONFIG_KEY) || 
                                localStorage.getItem(this.OLD_CONFIG_KEY);
       
@@ -199,6 +206,31 @@ export class ConfigService {
    */
   reloadConfig(): void {
     try {
+      // Check if user is authenticated and load appropriate config
+      if (this.accountService && this.accountService.isAuthenticated()) {
+        console.log('reloadConfig: User is authenticated, attempting to load user config from localStorage');
+        
+        // Try to find user config in localStorage
+        const currentConfig = this.configSubject.value;
+        if (currentConfig && currentConfig.userId && !currentConfig.isGuest) {
+          const userConfigKey = `helm_user_config_${currentConfig.userId}`;
+          const savedConfig = localStorage.getItem(userConfigKey);
+          if (savedConfig) {
+            try {
+              const parsed = JSON.parse(savedConfig);
+              console.log('reloadConfig: Loaded user config from localStorage');
+              this.configSubject.next(parsed);
+              return;
+            } catch (error) {
+              console.error('reloadConfig: Error parsing user config from localStorage:', error);
+            }
+          }
+        }
+        console.log('reloadConfig: No user config found in localStorage, falling back to guest config');
+      }
+      
+      // Fall back to guest config
+      console.log('reloadConfig: Loading guest config');
       const guestConfig = this.loadGuestConfig();
       this.configSubject.next(guestConfig);
       
@@ -801,18 +833,9 @@ export class ConfigService {
         console.log('Server config before merging:', JSON.stringify(serverConfig, null, 2));
         console.log('Server config quickLinks:', serverConfig.user?.quickLinks);
         
-        // Ensure proper structure with defaults for missing properties
-        const finalConfig = this.mergeWithDefaults(serverConfig, {
-          user: {
-            theme: { mode: 'light' },
-            color: { selectedColor: '#1a73e8,#155ab6' },
-            quickLinks: { enabled: false, links: [], maxLinks: 5 }
-          },
-          version: '1.0.0',
-          lastUpdated: new Date().toISOString(),
-          userId: response.userId || 'unknown',
-          isGuest: false
-        });
+        // Use server config as-is for complete override (no merging with defaults)
+        console.log('Using server config for complete override - discarding all local changes');
+        const finalConfig = serverConfig;
         
         // Overwrite local config completely
         console.log('=== FINAL CONFIG DEBUG ===');

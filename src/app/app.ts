@@ -80,23 +80,24 @@ export class App {
         const userId = response.userId || response.sessionId || 'unknown';
         console.log('Login successful, userId:', userId);
         
-        // Login successful - mark as authenticated locally
-        this.configService.setUserAuthenticated(userId);
-        console.log('Local config updated to mark user as authenticated');
-        
         // Load user info after successful login
         await this.loadUserInfo();
         
-        // Automatically sync config from server after login
+        // Sync config from server FIRST to completely override local config
         try {
+          console.log('Attempting to sync config from server after login...');
           const syncSuccess = await this.configService.syncFromServer();
           if (syncSuccess) {
-            console.log('Successfully synced config from server after login');
+            console.log('Successfully synced config from server after login - local config completely overridden');
           } else {
-            console.warn('Failed to sync config from server after login');
+            console.warn('Failed to sync config from server after login, falling back to local config update');
+            // Only if server sync fails, update local config
+            this.configService.setUserAuthenticated(userId);
           }
         } catch (syncError) {
           console.warn('Error syncing config from server after login:', syncError);
+          // Only if server sync fails, update local config
+          this.configService.setUserAuthenticated(userId);
         }
         
         this.signInPopup?.handleSignInResponse(true);
