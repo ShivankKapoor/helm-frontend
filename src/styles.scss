@@ -38,6 +38,7 @@ body {
 
 .search-box {
   display: flex;
+  align-items: center;
   width: 100%;
   min-width: 45vw;
   max-width: 700px;
@@ -45,21 +46,49 @@ body {
   overflow: hidden;
   background: var(--input-bg);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: box-shadow 0.3s;
+
+  &:focus-within {
+    box-shadow: 0 0 10px var(--button-bg);
+  }
+
+  .search-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px 0 16px;
+    color: var(--input-text);
+    opacity: 0.6;
+    transition: opacity 0.3s;
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
 
   input {
     flex: 1;
     border: none;
-    padding: 12px 16px;
+    padding: 12px 8px 12px 0;
     font-size: 18px;
     outline: none;
     background: var(--input-bg);
     color: var(--input-text);
     font-family: "Fira Code", monospace;
-    transition: background 0.3s, color 0.3s, box-shadow 0.3s;
+    transition: background 0.3s, color 0.3s;
 
     &:focus {
-      box-shadow: 0 0 10px var(--button-bg);
+      outline: none;
     }
+  }
+
+  &:focus-within .search-icon {
+    opacity: 0.8;
+  }
+
+  &:hover .search-icon {
+    opacity: 0.8;
   }
 
   button {
@@ -353,9 +382,18 @@ body {
 
 @media (max-width: 480px) {
   .search-box {
+    .search-icon {
+      padding: 0 8px 0 12px;
+
+      svg {
+        width: 18px;
+        height: 18px;
+      }
+    }
+
     input {
       font-size: 16px;
-      padding: 10px;
+      padding: 10px 6px 10px 0;
     }
 
     button {
