@@ -81,6 +81,16 @@ body {
     &:focus {
       outline: none;
     }
+
+    &::selection {
+      background: var(--button-bg);
+      color: white;
+    }
+
+    &::-moz-selection {
+      background: var(--button-bg);
+      color: white;
+    }
   }
 
   &:focus-within .search-icon {
