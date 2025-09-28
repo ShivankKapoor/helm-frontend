@@ -20,7 +20,10 @@ import { HeroWidgetConfig } from '../../models/config.model';
           }
           @case ('greeting') {
             <div class="hero-greeting">
-              <span class="greeting-text">{{ greetingMessage() }}</span>
+              <span class="greeting-text">{{ greetingTimeOfDay() }}</span>
+              @if (greetingName()) {
+                <span class="greeting-name">{{ greetingName() }}</span>
+              }
               <span class="date">{{ currentDate() }}</span>
             </div>
           }
@@ -31,9 +34,10 @@ import { HeroWidgetConfig } from '../../models/config.model';
   styles: [`
     .hero-widget {
       position: fixed;
-      top: 60px;
+      top: 50%;
       left: 50%;
-      transform: translateX(-50%);
+      transform: translate(-50%, -50%);
+      margin-top: -120px;
       z-index: 500;
       text-align: center;
       color: var(--text-color);
@@ -42,6 +46,10 @@ import { HeroWidgetConfig } from '../../models/config.model';
       pointer-events: none;
       opacity: 0.9;
       transition: opacity 0.3s ease;
+      width: 100%;
+      max-width: 600px;
+      padding: 0 20px;
+      box-sizing: border-box;
     }
     
     .hero-widget:hover {
@@ -59,7 +67,7 @@ import { HeroWidgetConfig } from '../../models/config.model';
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 4px;
+      gap: 8px;
     }
     
     .time {
@@ -74,6 +82,16 @@ import { HeroWidgetConfig } from '../../models/config.model';
       font-weight: 500;
       letter-spacing: 0.02em;
       text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      line-height: 1.2;
+    }
+    
+    .greeting-name {
+      font-size: 2.2rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: var(--button-bg);
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      line-height: 1.1;
     }
     
     .date {
@@ -87,7 +105,8 @@ import { HeroWidgetConfig } from '../../models/config.model';
     /* Responsive adjustments */
     @media (max-width: 768px) {
       .hero-widget {
-        top: 40px;
+        margin-top: -100px;
+        padding: 0 15px;
       }
       
       .time {
@@ -98,6 +117,10 @@ import { HeroWidgetConfig } from '../../models/config.model';
         font-size: 1.4rem;
       }
       
+      .greeting-name {
+        font-size: 1.8rem;
+      }
+      
       .date {
         font-size: 0.8rem;
       }
@@ -105,7 +128,8 @@ import { HeroWidgetConfig } from '../../models/config.model';
     
     @media (max-width: 480px) {
       .hero-widget {
-        top: 30px;
+        margin-top: -80px;
+        padding: 0 10px;
       }
       
       .time {
@@ -114,6 +138,10 @@ import { HeroWidgetConfig } from '../../models/config.model';
       
       .greeting-text {
         font-size: 1.2rem;
+      }
+      
+      .greeting-name {
+        font-size: 1.5rem;
       }
       
       .date {
@@ -131,6 +159,11 @@ import { HeroWidgetConfig } from '../../models/config.model';
       text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     }
     
+    :host-context(.dark) .greeting-name {
+      color: var(--button-bg);
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+    
     :host-context(.dark) .date {
       text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     }
@@ -140,7 +173,7 @@ export class HeroWidgetComponent implements OnInit, OnDestroy {
   private configService = inject(ConfigService);
   private accountService = inject(AccountService);
   
-  // Hero widget component provides both clock and greeting functionality
+  // Hero widget component provides both clock and greeting functionality with enhanced layout
   
   protected readonly config = signal<HeroWidgetConfig>({
     enabled: true,
@@ -154,6 +187,8 @@ export class HeroWidgetComponent implements OnInit, OnDestroy {
   protected readonly currentTime = signal('');
   protected readonly currentDate = signal('');
   protected readonly greetingMessage = signal('');
+  protected readonly greetingTimeOfDay = signal('');
+  protected readonly greetingName = signal('');
   protected readonly currentUsername = signal<string | null>(null);
   
   private timeInterval?: number;
@@ -274,6 +309,9 @@ export class HeroWidgetComponent implements OnInit, OnDestroy {
       timeOfDay = 'Good Night';
     }
     
+    // Set the time of day
+    this.greetingTimeOfDay.set(timeOfDay);
+    
     // Determine name to use
     let displayName = '';
     const currentConfig = this.config();
@@ -287,7 +325,10 @@ export class HeroWidgetComponent implements OnInit, OnDestroy {
       displayName = this.currentUsername()!;
     }
     
-    // Construct greeting message
+    // Set the name separately
+    this.greetingName.set(displayName);
+    
+    // Keep the old combined greeting for backward compatibility if needed
     const greeting = displayName ? `${timeOfDay}, ${displayName}` : timeOfDay;
     this.greetingMessage.set(greeting);
   }
