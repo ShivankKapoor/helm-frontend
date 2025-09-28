@@ -143,7 +143,6 @@ export class AccountService {
   private hasValidSession(): boolean {
     const token = this.getStoredSessionToken();
     const isValid = !!token && token.length > 10; // Basic validation
-    console.log('Session valid check:', isValid, 'token exists:', !!token);
     return isValid;
   }
 

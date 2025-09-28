@@ -168,7 +168,6 @@ export class ConfigService {
       // Skip localStorage change detection if user is authenticated
       // When authenticated, server sync should be the source of truth
       if (this.accountService && this.accountService.isAuthenticated()) {
-        console.log('Skipping localStorage change detection - user is authenticated');
         return;
       }
       
