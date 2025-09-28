@@ -81,17 +81,12 @@ export class SeoService {
 
   // Method to update SEO based on current state
   updateSeoForCurrentState(config?: any) {
-    const baseTitle = 'Helm - Advanced Search & Quick Links Dashboard';
+    const baseTitle = 'HelmSeek';
     const baseDescription = 'Helm is a powerful, customizable search dashboard with quick links, theme switching, and cloud sync. Streamline your browsing experience with personalized shortcuts and beautiful themes.';
     
-    // Update title based on user state
-    if (config?.user?.quickLinks?.enabled && config?.user?.quickLinks?.links?.length > 0) {
-      this.updateTitle(`${baseTitle} - ${config.user.quickLinks.links.length} Quick Links`);
-      this.updateMetaDescription(`${baseDescription} Currently featuring ${config.user.quickLinks.links.length} personalized quick links.`);
-    } else {
-      this.updateTitle(baseTitle);
-      this.updateMetaDescription(baseDescription);
-    }
+    // Update title - keep it simple as "HelmSeek"
+    this.updateTitle(baseTitle);
+    this.updateMetaDescription(baseDescription);
     
     // Update theme color based on current theme
     const currentTheme = document.documentElement.style.getPropertyValue('--button-bg') || '#1a73e8';
