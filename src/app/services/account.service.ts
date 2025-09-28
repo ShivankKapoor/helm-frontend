@@ -1,5 +1,5 @@
 // API Configuration - Production hosted API
-const API_BASE_URL = 'http://localhost:7666';
+const API_BASE_URL = 'https://api.helmseek.com';
 
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
