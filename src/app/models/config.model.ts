@@ -28,10 +28,19 @@ export interface QuickLinksConfig {
   maxLinks: number; // Maximum number of links allowed
 }
 
+export interface HeroWidgetConfig {
+  enabled: boolean; // Global enable/disable for hero widget
+  mode: 'clock' | 'greeting' | 'disabled'; // Widget display mode
+  clockFormat: '12h' | '24h'; // Clock format preference
+  showSeconds: boolean; // Show seconds in clock
+  greetingName: string; // Custom name for greeting (empty = use username)
+}
+
 export interface UserConfig {
   theme: ThemeConfig;
   color: ColorConfig;
   quickLinks: QuickLinksConfig; // Changed from quickLink to quickLinks
+  heroWidget: HeroWidgetConfig; // Hero area widget configuration
   // Future user preferences can go here
   preferences?: {
     language?: string;
@@ -68,6 +77,13 @@ export const DEFAULT_GUEST_CONFIG: AppConfig = {
       enabled: false,
       links: [],
       maxLinks: 5
+    },
+    heroWidget: {
+      enabled: true,
+      mode: 'greeting',
+      clockFormat: '12h',
+      showSeconds: false,
+      greetingName: ''
     }
   },
   version: '1.0.0',
@@ -83,6 +99,13 @@ export const DEFAULT_USER_CONFIG: AppConfig = {
       enabled: false,
       links: [],
       maxLinks: 5
+    },
+    heroWidget: {
+      enabled: true,
+      mode: 'greeting',
+      clockFormat: '12h',
+      showSeconds: false,
+      greetingName: ''
     }
   },
   version: '1.0.0',

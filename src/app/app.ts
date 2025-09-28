@@ -5,13 +5,14 @@ import { SettingsComponent } from './components/settings/settings.component';
 import { SignInPopupComponent } from './components/account/sign-in-popup.component';
 import { UserInfoPopupComponent } from './components/account/user-info-popup.component';
 import { QuickLinkComponent } from './components/quick-link/quick-link.component';
+import { HeroWidgetComponent } from './components/hero-widget/hero-widget.component';
 import { AccountService } from './services/account.service';
 import { ConfigService } from './services/config.service';
 import { SeoService } from './services/seo.service';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, SearchComponent, SettingsComponent, SignInPopupComponent, UserInfoPopupComponent, QuickLinkComponent],
+  imports: [CommonModule, SearchComponent, SettingsComponent, SignInPopupComponent, UserInfoPopupComponent, QuickLinkComponent, HeroWidgetComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
