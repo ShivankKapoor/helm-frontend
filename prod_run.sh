@@ -11,23 +11,7 @@ IMAGE_NAME="helm-frontend:latest"
 PORT=3003
 DIST_DIR="dist/helm-frontend"
 
-echo "🏗️  Building Angular app for production..."
-
-# Clean previous build
-if [ -d "$DIST_DIR" ]; then
-    rm -rf "$DIST_DIR"
-fi
-
-# Build the Angular app
-npm run build --configuration=production
-
-# Check if build was successful
-if [ ! -d "$DIST_DIR" ]; then
-    echo "❌ Build failed - dist directory not found"
-    exit 1
-fi
-
-echo "✅ Angular build completed successfully"
+echo "🏗️  Building Angular app inside container..."
 
 # Check if podman is installed
 if ! command -v podman &> /dev/null; then

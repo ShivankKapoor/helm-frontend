@@ -1,11 +1,29 @@
-# Use the official Nginx image as base
-FROM nginx:alpine
+# Multi-stage build: Build stage
+FROM node:20-alpine AS build
+
+# Set working directory
+WORKDIR /app
+
+# Copy package.json and package-lock.json
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci --production=false
+
+# Copy source code
+COPY . .
+
+# Build the Angular app for production
+RUN npm run build --configuration=production
+
+# Multi-stage build: Production stage
+FROM nginx:alpine AS production
 
 # Remove default nginx website
 RUN rm -rf /usr/share/nginx/html/*
 
-# Copy the Angular build output to nginx html directory
-COPY dist/helm-frontend/browser/ /usr/share/nginx/html/
+# Copy the Angular build output from build stage
+COPY --from=build /app/dist/helm-frontend/browser/ /usr/share/nginx/html/
 
 # Create nginx configuration for Angular SPA
 RUN echo 'server { \
