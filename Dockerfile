@@ -50,7 +50,7 @@ RUN echo 'server { \
         application/json; \
     \
     # Cache static assets \
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ { \
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|webp)$ { \
         expires 1y; \
         add_header Cache-Control "public, immutable"; \
     } \
