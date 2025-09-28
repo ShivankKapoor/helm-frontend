@@ -38,14 +38,12 @@ export class ConfigService {
       console.log('Checking existing session - has token:', hasToken);
       
       if (hasToken) {
-        // Try to get user data to verify session is still valid
-        const response = await this.accountService.getUserData().toPromise();
+        // Try to get username to verify session is still valid
+        const response = await this.accountService.getUsername().toPromise();
         console.log('Session validation response:', response);
         
-        if (response?.success) {
-          // Handle both old format (userId/username at root) and new format (nested in data)
-          const userData = response.data || response;
-          const userIdentifier = response.userId || response.username || userData.userId || userData.username || 'authenticated-user';
+        if (response?.success && response.username) {
+          const userIdentifier = response.username;
           console.log('Valid session found, restoring user state and syncing config for user:', userIdentifier);
           // Set user as authenticated locally
           this.setUserAuthenticated(userIdentifier);

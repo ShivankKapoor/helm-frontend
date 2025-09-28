@@ -1,5 +1,5 @@
 // API Configuration - Production hosted API
-const API_BASE_URL = 'https://api.helmseek.com';
+const API_BASE_URL = 'http://localhost:7666';
 
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
@@ -40,6 +40,10 @@ interface UserDataResponse extends ApiResponse {
   userId?: string;
   username?: string;
   data?: any;
+}
+
+interface UsernameResponse extends ApiResponse {
+  username?: string;
 }
 
 interface HealthResponse {
@@ -230,6 +234,27 @@ export class AccountService {
   }
 
   /**
+   * Get current user's username from the correct endpoint
+   */
+  getUsername(): Observable<UsernameResponse> {
+    const headers = this.getAuthHeaders();
+    console.log('Making GET request to /api/username with headers:', headers.keys());
+    console.log('SessionToken header value:', headers.get('sessionToken'));
+    return this.http.get<UsernameResponse>(`${API_BASE_URL}/api/username`, { headers })
+      .pipe(
+        tap(response => {
+          console.log('GET /api/username response:', response);
+        }),
+        catchError((error: any) => {
+          console.error('GET /api/username error:', error);
+          console.error('Error status:', error.status);
+          console.error('Error message:', error.message);
+          throw error;
+        })
+      );
+  }
+
+  /**
    * Update user's data (completely replaces existing data)
    * Data should include: version, lastUpdated, isGuest, user object
    */
@@ -270,11 +295,29 @@ export class AccountService {
     }
 
     try {
-      const response = await this.getUserData().toPromise();
-      if (response?.success) {
+      // Get username from the correct endpoint
+      const usernameResponse = await this.getUsername().toPromise();
+      let username = null;
+      let userId = null;
+
+      if (usernameResponse?.success && usernameResponse.username) {
+        username = usernameResponse.username;
+      }
+
+      // Try to get userId from user data endpoint if needed
+      try {
+        const userDataResponse = await this.getUserData().toPromise();
+        if (userDataResponse?.success) {
+          userId = userDataResponse.userId;
+        }
+      } catch (userDataError) {
+        console.warn('Could not fetch user data for userId:', userDataError);
+      }
+
+      if (username) {
         this.cachedUserInfo = {
-          username: response.username,
-          userId: response.userId
+          username: username,
+          userId: userId || undefined
         };
         return this.cachedUserInfo;
       }
