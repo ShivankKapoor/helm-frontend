@@ -4,7 +4,7 @@ import { ThemeService } from '../../services/theme.service';
 import { ColorService } from '../../services/color.service';
 import { ConfigService } from '../../services/config.service';
 import { AccountService } from '../../services/account.service';
-import { QuickLinkConfig, QuickLinksConfig } from '../../models/config.model';
+import { QuickLinkConfig, QuickLinksConfig, HeroWidgetConfig } from '../../models/config.model';
 import { QuickLinkSettingsComponent } from '../quick-link-settings/quick-link-settings.component';
 
 @Component({
@@ -49,6 +49,79 @@ import { QuickLinkSettingsComponent } from '../quick-link-settings/quick-link-se
                   <option [value]="color.value">{{ color.name }}</option>
                 }
               </select>
+            </div>
+
+            <!-- Hero Widget Section -->
+            <div class="setting-section">
+              <label>Hero Widget</label>
+              <div class="hero-widget-manager">
+                <label class="toggle-row">
+                  <input 
+                    type="checkbox" 
+                    [(ngModel)]="heroWidgetEnabled"
+                    (ngModelChange)="onHeroWidgetEnabledChange($event)"
+                  >
+                  <span>Enable Hero Widget</span>
+                </label>
+                
+                @if (heroWidgetEnabled) {
+                  <div class="hero-widget-options">
+                    <div class="setting-row">
+                      <label for="hero-mode">Display Mode</label>
+                      <select 
+                        id="hero-mode"
+                        class="setting-select" 
+                        [(ngModel)]="heroWidgetMode"
+                        (ngModelChange)="onHeroWidgetModeChange($event)"
+                      >
+                        <option value="greeting">Time-based Greeting</option>
+                        <option value="clock">Digital Clock</option>
+                        <option value="both">Greeting + Clock</option>
+                      </select>
+                    </div>
+                    
+                    @if (heroWidgetMode === 'clock' || heroWidgetMode === 'both') {
+                      <div class="setting-row">
+                        <label for="clock-format">Clock Format</label>
+                        <select 
+                          id="clock-format"
+                          class="setting-select" 
+                          [(ngModel)]="heroClockFormat"
+                          (ngModelChange)="onHeroClockFormatChange($event)"
+                        >
+                          <option value="12h">12 Hour (AM/PM)</option>
+                          <option value="24h">24 Hour</option>
+                        </select>
+                      </div>
+                      
+                      <label class="toggle-row">
+                        <input 
+                          type="checkbox" 
+                          [(ngModel)]="heroShowSeconds"
+                          (ngModelChange)="onHeroShowSecondsChange($event)"
+                        >
+                        <span>Show Seconds</span>
+                      </label>
+                    }
+                    
+                    @if (heroWidgetMode === 'greeting' || heroWidgetMode === 'both') {
+                      <div class="setting-row">
+                        <label for="greeting-name">Custom Name (optional)</label>
+                        <input 
+                          id="greeting-name"
+                          type="text" 
+                          class="setting-input"
+                          [(ngModel)]="heroGreetingName"
+                          (ngModelChange)="onHeroGreetingNameChange($event)"
+                          placeholder="Leave blank to use username"
+                          maxlength="30"
+                        >
+                        <small class="setting-hint">Custom name for greeting (e.g., "Good Morning, Alex")</small>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
             </div>
 
             <!-- Quick Links Section - Multiple Links Support -->
@@ -518,6 +591,79 @@ import { QuickLinkSettingsComponent } from '../quick-link-settings/quick-link-se
       border: 1px solid #f5c6cb;
     }
     
+    /* Hero Widget Styles */
+    .hero-widget-manager {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    
+    .hero-widget-options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-left: 1.5rem;
+      padding: 0.75rem;
+      border-left: 2px solid var(--border-color, #e0e0e0);
+      background: var(--section-bg, rgba(0, 0, 0, 0.02));
+      border-radius: 0 4px 4px 0;
+    }
+    
+    .setting-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    
+    .setting-row label {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-secondary, #666);
+      margin-bottom: 0.25rem;
+    }
+    
+    .setting-select {
+      padding: 8px 12px;
+      border: 1px solid var(--border-color, #e0e0e0);
+      border-radius: 4px;
+      background: var(--input-bg, #fff);
+      color: var(--input-text, #333);
+      font-family: "Fira Code", monospace;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: border-color 0.2s ease;
+    }
+    
+    .setting-select:focus {
+      outline: none;
+      border-color: var(--button-bg, #1a73e8);
+      box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.1);
+    }
+    
+    .setting-input {
+      padding: 8px 12px;
+      border: 1px solid var(--border-color, #e0e0e0);
+      border-radius: 4px;
+      background: var(--input-bg, #fff);
+      color: var(--input-text, #333);
+      font-family: "Fira Code", monospace;
+      font-size: 0.875rem;
+      transition: border-color 0.2s ease;
+    }
+    
+    .setting-input:focus {
+      outline: none;
+      border-color: var(--button-bg, #1a73e8);
+      box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.1);
+    }
+    
+    .setting-hint {
+      color: var(--text-tertiary, #999);
+      font-size: 0.75rem;
+      font-style: italic;
+      margin-top: 0.25rem;
+    }
+
     /* Dark mode account styles */
     :host-context(.dark) .account-description {
       color: var(--text-secondary, #b0b0b0);
@@ -533,6 +679,27 @@ import { QuickLinkSettingsComponent } from '../quick-link-settings/quick-link-se
       background: #4d1e1e;
       color: #d4a7a7;
       border-color: #5a2d2d;
+    }
+    
+    /* Dark mode hero widget styles */
+    :host-context(.dark) .hero-widget-options {
+      background: rgba(255, 255, 255, 0.05);
+      border-left-color: var(--border-color, #555);
+    }
+    
+    :host-context(.dark) .setting-row label {
+      color: var(--text-secondary, #b0b0b0);
+    }
+    
+    :host-context(.dark) .setting-select,
+    :host-context(.dark) .setting-input {
+      background: var(--input-bg, #303134);
+      color: var(--input-text, #e8eaed);
+      border-color: var(--border-color, #555);
+    }
+    
+    :host-context(.dark) .setting-hint {
+      color: var(--text-tertiary, #888);
     }
   `]
 })
@@ -560,11 +727,18 @@ export class SettingsComponent {
   maxQuickLinks = 5;
   editingLinkId: string | null = null;
 
+  // Hero Widget properties
+  heroWidgetEnabled = false;
+  heroWidgetMode: 'clock' | 'greeting' | 'both' = 'greeting';
+  heroClockFormat: '12h' | '24h' = '12h';
+  heroShowSeconds = false;
+  heroGreetingName = '';
+
   constructor() {
     // Set AccountService reference in ConfigService to avoid circular dependency
     this.configService.setAccountService(this.accountService);
     
-    // Subscribe to config changes to populate quick links settings
+    // Subscribe to config changes to populate settings
     this.configService.config$.subscribe(config => {
       if (config?.user?.quickLinks) {
         this.quickLinksEnabled = config.user.quickLinks.enabled;
@@ -573,6 +747,14 @@ export class SettingsComponent {
           ? [...config.user.quickLinks.links] 
           : [];
         this.maxQuickLinks = config.user.quickLinks.maxLinks;
+      }
+      
+      if (config?.user?.heroWidget) {
+        this.heroWidgetEnabled = config.user.heroWidget.enabled;
+        this.heroWidgetMode = config.user.heroWidget.mode === 'disabled' ? 'greeting' : config.user.heroWidget.mode;
+        this.heroClockFormat = config.user.heroWidget.clockFormat;
+        this.heroShowSeconds = config.user.heroWidget.showSeconds;
+        this.heroGreetingName = config.user.heroWidget.greetingName;
       }
     });
   }
@@ -641,6 +823,30 @@ export class SettingsComponent {
       // Add new link
       this.configService.addQuickLink(config);
     }
+  }
+
+  // Hero Widget methods
+  onHeroWidgetEnabledChange(enabled: boolean) {
+    this.configService.updateHeroWidget({ 
+      enabled,
+      mode: enabled ? (this.heroWidgetMode || 'greeting') : 'disabled'
+    });
+  }
+
+  onHeroWidgetModeChange(mode: 'clock' | 'greeting' | 'both') {
+    this.configService.updateHeroWidget({ mode });
+  }
+
+  onHeroClockFormatChange(clockFormat: '12h' | '24h') {
+    this.configService.updateHeroWidget({ clockFormat });
+  }
+
+  onHeroShowSecondsChange(showSeconds: boolean) {
+    this.configService.updateHeroWidget({ showSeconds });
+  }
+
+  onHeroGreetingNameChange(greetingName: string) {
+    this.configService.updateHeroWidget({ greetingName });
   }
 
   formatCorner(corner: QuickLinkConfig['corner']): string {

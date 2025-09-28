@@ -2,7 +2,7 @@ import { Injectable, signal, Inject, forwardRef } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, of } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
-import { AppConfig, DEFAULT_GUEST_CONFIG, DEFAULT_USER_CONFIG, UserConfig, QuickLinkConfig, QuickLinksConfig } from '../models/config.model';
+import { AppConfig, DEFAULT_GUEST_CONFIG, DEFAULT_USER_CONFIG, UserConfig, QuickLinkConfig, QuickLinksConfig, HeroWidgetConfig } from '../models/config.model';
 
 @Injectable({
   providedIn: 'root'
@@ -475,6 +475,10 @@ export class ConfigService {
           links: Array.isArray(config.user?.quickLinks?.links) 
             ? config.user.quickLinks.links 
             : defaults.user.quickLinks.links
+        },
+        heroWidget: {
+          ...defaults.user.heroWidget,
+          ...config.user?.heroWidget
         }
       }
     };
@@ -542,6 +546,21 @@ export class ConfigService {
   updateQuickLinks(quickLinks: QuickLinksConfig): void {
     this.updateUserConfig({
       quickLinks
+    });
+  }
+
+  /**
+   * Update hero widget configuration
+   */
+  updateHeroWidget(heroWidget: Partial<HeroWidgetConfig>): void {
+    const currentConfig = this.currentConfig;
+    const updatedHeroWidget = {
+      ...currentConfig.user.heroWidget,
+      ...heroWidget
+    };
+    
+    this.updateUserConfig({
+      heroWidget: updatedHeroWidget
     });
   }
 
@@ -815,26 +834,21 @@ export class ConfigService {
         console.log('QuickLinks links isArray:', Array.isArray(transformedData.user?.quickLinks?.links));
         console.log('=== TRANSFORMATION DEBUG END ===');
         
-        // Create clean server config - overwrite everything
-        const serverConfig = {
-          user: transformedData.user || {
-            theme: { mode: 'light' },
-            color: { selectedColor: '#1a73e8,#155ab6' },
-            quickLinks: { enabled: false, links: [], maxLinks: 5 }
-          },
-          version: transformedData.version || '1.0.0',
-          lastUpdated: new Date().toISOString(),
+        // Create server config with proper defaults
+        const serverConfigBase = {
+          ...transformedData,
           userId: response.userId || 'unknown',
-          isGuest: false
+          isGuest: false,
+          lastUpdated: new Date().toISOString()
         };
         
         console.log('=== SERVER CONFIG DEBUG ===');
-        console.log('Server config before merging:', JSON.stringify(serverConfig, null, 2));
-        console.log('Server config quickLinks:', serverConfig.user?.quickLinks);
+        console.log('Server config before merging:', JSON.stringify(serverConfigBase, null, 2));
+        console.log('Server config quickLinks:', serverConfigBase.user?.quickLinks);
         
-        // Use server config as-is for complete override (no merging with defaults)
-        console.log('Using server config for complete override - discarding all local changes');
-        const finalConfig = serverConfig;
+        // Merge with defaults to ensure all properties exist
+        console.log('Merging server config with defaults to ensure all properties exist');
+        const finalConfig = this.mergeWithDefaults(serverConfigBase, { ...DEFAULT_USER_CONFIG, userId: response.userId || 'unknown', isGuest: false });
         
         // Overwrite local config completely
         console.log('=== FINAL CONFIG DEBUG ===');
