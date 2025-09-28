@@ -77,6 +77,7 @@ import { QuickLinkSettingsComponent } from '../quick-link-settings/quick-link-se
                         <option value="greeting">Time-based Greeting</option>
                         <option value="clock">Digital Clock</option>
                         <option value="both">Greeting + Clock</option>
+                        <option value="none">None (Hide Widget)</option>
                       </select>
                     </div>
                     
@@ -729,7 +730,7 @@ export class SettingsComponent {
 
   // Hero Widget properties
   heroWidgetEnabled = false;
-  heroWidgetMode: 'clock' | 'greeting' | 'both' = 'greeting';
+  heroWidgetMode: 'clock' | 'greeting' | 'both' | 'none' = 'greeting';
   heroClockFormat: '12h' | '24h' = '12h';
   heroShowSeconds = false;
   heroGreetingName = '';
@@ -751,7 +752,7 @@ export class SettingsComponent {
       
       if (config?.user?.heroWidget) {
         this.heroWidgetEnabled = config.user.heroWidget.enabled;
-        this.heroWidgetMode = config.user.heroWidget.mode === 'disabled' ? 'greeting' : config.user.heroWidget.mode;
+        this.heroWidgetMode = config.user.heroWidget.mode;
         this.heroClockFormat = config.user.heroWidget.clockFormat;
         this.heroShowSeconds = config.user.heroWidget.showSeconds;
         this.heroGreetingName = config.user.heroWidget.greetingName;
@@ -829,7 +830,7 @@ export class SettingsComponent {
   onHeroWidgetEnabledChange(enabled: boolean) {
     this.configService.updateHeroWidget({ 
       enabled,
-      mode: enabled ? (this.heroWidgetMode || 'greeting') : 'disabled'
+      mode: enabled ? (this.heroWidgetMode || 'greeting') : 'none'
     });
   }
 

@@ -224,7 +224,7 @@ export class HeroWidgetComponent implements OnInit, OnDestroy {
     this.configSubscription = this.configService.config$.subscribe(appConfig => {
       const heroConfig = appConfig.user.heroWidget;
       this.config.set(heroConfig);
-      this.isEnabled.set(heroConfig.enabled && heroConfig.mode !== 'disabled');
+      this.isEnabled.set(heroConfig.enabled && heroConfig.mode !== 'none');
       
       if (this.isEnabled()) {
         this.startTimeUpdates();
