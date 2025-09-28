@@ -76,10 +76,11 @@ import { QuickLinkSettingsComponent } from '../quick-link-settings/quick-link-se
                       >
                         <option value="greeting">Time-based Greeting</option>
                         <option value="clock">Digital Clock</option>
+                        <option value="both">Greeting + Clock</option>
                       </select>
                     </div>
                     
-                    @if (heroWidgetMode === 'clock') {
+                    @if (heroWidgetMode === 'clock' || heroWidgetMode === 'both') {
                       <div class="setting-row">
                         <label for="clock-format">Clock Format</label>
                         <select 
@@ -103,7 +104,7 @@ import { QuickLinkSettingsComponent } from '../quick-link-settings/quick-link-se
                       </label>
                     }
                     
-                    @if (heroWidgetMode === 'greeting') {
+                    @if (heroWidgetMode === 'greeting' || heroWidgetMode === 'both') {
                       <div class="setting-row">
                         <label for="greeting-name">Custom Name (optional)</label>
                         <input 
@@ -728,7 +729,7 @@ export class SettingsComponent {
 
   // Hero Widget properties
   heroWidgetEnabled = false;
-  heroWidgetMode: 'clock' | 'greeting' = 'greeting';
+  heroWidgetMode: 'clock' | 'greeting' | 'both' = 'greeting';
   heroClockFormat: '12h' | '24h' = '12h';
   heroShowSeconds = false;
   heroGreetingName = '';
@@ -832,7 +833,7 @@ export class SettingsComponent {
     });
   }
 
-  onHeroWidgetModeChange(mode: 'clock' | 'greeting') {
+  onHeroWidgetModeChange(mode: 'clock' | 'greeting' | 'both') {
     this.configService.updateHeroWidget({ mode });
   }
 

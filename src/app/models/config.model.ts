@@ -30,7 +30,7 @@ export interface QuickLinksConfig {
 
 export interface HeroWidgetConfig {
   enabled: boolean; // Global enable/disable for hero widget
-  mode: 'clock' | 'greeting' | 'disabled'; // Widget display mode
+  mode: 'clock' | 'greeting' | 'both' | 'disabled'; // Widget display mode
   clockFormat: '12h' | '24h'; // Clock format preference
   showSeconds: boolean; // Show seconds in clock
   greetingName: string; // Custom name for greeting (empty = use username)

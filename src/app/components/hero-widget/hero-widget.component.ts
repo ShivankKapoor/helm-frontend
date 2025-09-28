@@ -27,6 +27,16 @@ import { HeroWidgetConfig } from '../../models/config.model';
               <span class="date">{{ currentDate() }}</span>
             </div>
           }
+          @case ('both') {
+            <div class="hero-both">
+              <span class="greeting-text">{{ greetingTimeOfDay() }}</span>
+              @if (greetingName()) {
+                <span class="greeting-name">{{ greetingName() }}</span>
+              }
+              <span class="time">{{ currentTime() }}</span>
+              <span class="date">{{ currentDate() }}</span>
+            </div>
+          }
         }
       </div>
     }
@@ -68,6 +78,13 @@ import { HeroWidgetConfig } from '../../models/config.model';
       flex-direction: column;
       align-items: center;
       gap: 8px;
+    }
+    
+    .hero-both {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
     }
     
     .time {
@@ -121,6 +138,10 @@ import { HeroWidgetConfig } from '../../models/config.model';
         font-size: 1.8rem;
       }
       
+      .hero-both .time {
+        font-size: 1.8rem;
+      }
+      
       .date {
         font-size: 0.8rem;
       }
@@ -142,6 +163,10 @@ import { HeroWidgetConfig } from '../../models/config.model';
       
       .greeting-name {
         font-size: 1.5rem;
+      }
+      
+      .hero-both .time {
+        font-size: 1.4rem;
       }
       
       .date {
