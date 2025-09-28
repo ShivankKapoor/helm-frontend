@@ -1,4 +1,4 @@
-import { Component, signal, ViewChild } from '@angular/core';
+import { Component, signal, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SearchComponent } from './components/search/search.component';
 import { SettingsComponent } from './components/settings/settings.component';
@@ -7,6 +7,7 @@ import { UserInfoPopupComponent } from './components/account/user-info-popup.com
 import { QuickLinkComponent } from './components/quick-link/quick-link.component';
 import { AccountService } from './services/account.service';
 import { ConfigService } from './services/config.service';
+import { SeoService } from './services/seo.service';
 
 @Component({
   selector: 'app-root',
@@ -23,12 +24,19 @@ export class App {
 
   @ViewChild(SignInPopupComponent) signInPopup?: SignInPopupComponent;
 
+  private seoService = inject(SeoService);
+
   constructor(
     protected accountService: AccountService,
     private configService: ConfigService
   ) {
     // Set AccountService reference in ConfigService to avoid circular dependency
     this.configService.setAccountService(this.accountService);
+    
+    // Subscribe to config changes for SEO updates
+    this.configService.config$.subscribe(config => {
+      this.seoService.updateSeoForCurrentState(config);
+    });
   }
 
   openSignInPopup() {
