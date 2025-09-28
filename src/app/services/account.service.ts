@@ -42,10 +42,6 @@ interface UserDataResponse extends ApiResponse {
   data?: any;
 }
 
-interface UpdateDataRequest {
-  data: any;
-}
-
 interface HealthResponse {
   status: string;
   service: string;
@@ -201,13 +197,23 @@ export class AccountService {
 
   /**
    * Update user's data (completely replaces existing data)
+   * Data should include: version, lastUpdated, isGuest, user object
    */
   updateUserData(data: any): Observable<ApiResponse> {
     const headers = this.getAuthHeaders();
-    const updateRequest: UpdateDataRequest = { data };
+    
+    // Ensure proper data structure with lastUpdated timestamp
+    const updateData = {
+      ...data,
+      lastUpdated: new Date().toISOString(),
+      version: data.version || "1.0.0"
+    };
+    
     console.log('Making POST request to /api/update with headers:', headers);
-    console.log('Update request payload:', updateRequest);
-    return this.http.post<ApiResponse>(`${API_BASE_URL}/api/update`, updateRequest, { headers })
+    console.log('Update request payload (direct data):', updateData);
+    
+    // Send data directly, not wrapped in { data: ... }
+    return this.http.post<ApiResponse>(`${API_BASE_URL}/api/update`, updateData, { headers })
       .pipe(
         tap(response => {
           console.log('POST /api/update response:', response);
