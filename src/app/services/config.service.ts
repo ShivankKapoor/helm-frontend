@@ -42,8 +42,10 @@ export class ConfigService {
         const response = await this.accountService.getUserData().toPromise();
         console.log('Session validation response:', response);
         
-        if (response?.success && (response.userId || response.username)) {
-          const userIdentifier = response.userId || response.username || 'unknown';
+        if (response?.success) {
+          // Handle both old format (userId/username at root) and new format (nested in data)
+          const userData = response.data || response;
+          const userIdentifier = response.userId || response.username || userData.userId || userData.username || 'authenticated-user';
           console.log('Valid session found, restoring user state and syncing config for user:', userIdentifier);
           // Set user as authenticated locally
           this.setUserAuthenticated(userIdentifier);

@@ -60,7 +60,19 @@ export class AccountService {
   // Cache for user info
   private cachedUserInfo: { username?: string; userId?: string } | null = null;
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) {
+    // Defer initial session check to avoid timing issues
+    setTimeout(() => this.checkInitialSession(), 0);
+  }
+
+  /**
+   * Check session after service initialization
+   */
+  private checkInitialSession(): void {
+    const hasSession = this.hasValidSession();
+    console.log('Initial session check:', hasSession);
+    this.isLoggedInSubject.next(hasSession);
+  }
 
   /**
    * Get stored session token from cookies/localStorage
@@ -93,26 +105,42 @@ export class AccountService {
    * Store session token in both localStorage and cookies
    */
   private setSessionToken(token: string): void {
+    console.log('Storing session token:', !!token, 'length:', token?.length);
     localStorage.setItem(this.sessionTokenKey, token);
-    // Set cookie with 30 days expiration
+    
+    // Set cookie with 30 days expiration and proper security settings
     const expirationDate = new Date();
     expirationDate.setTime(expirationDate.getTime() + (30 * 24 * 60 * 60 * 1000));
-    document.cookie = `${this.sessionTokenKey}=${token}; expires=${expirationDate.toUTCString()}; path=/; SameSite=Strict`;
+    
+    // Use Lax for better compatibility across domains while maintaining security
+    document.cookie = `${this.sessionTokenKey}=${token}; expires=${expirationDate.toUTCString()}; path=/; SameSite=Lax; Secure=${location.protocol === 'https:'}`;
+    
+    // Update the BehaviorSubject immediately
+    this.isLoggedInSubject.next(true);
   }
 
   /**
    * Remove session token from storage
    */
   private clearSessionToken(): void {
+    console.log('Clearing session token');
     localStorage.removeItem(this.sessionTokenKey);
-    document.cookie = `${this.sessionTokenKey}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+    
+    // Clear cookie with same settings as when it was set
+    document.cookie = `${this.sessionTokenKey}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax`;
+    
+    // Update the BehaviorSubject immediately
+    this.isLoggedInSubject.next(false);
   }
 
   /**
    * Check if user has a valid session token
    */
   private hasValidSession(): boolean {
-    return !!this.getStoredSessionToken();
+    const token = this.getStoredSessionToken();
+    const isValid = !!token && token.length > 10; // Basic validation
+    console.log('Session valid check:', isValid, 'token exists:', !!token);
+    return isValid;
   }
 
   /**
@@ -136,9 +164,12 @@ export class AccountService {
     return this.http.post<RegisterResponse>(`${API_BASE_URL}/auth/register`, registerData)
       .pipe(
         tap(response => {
+          console.log('Register response:', response);
           if (response.success && response.sessionId) {
             this.setSessionToken(response.sessionId);
-            this.isLoggedInSubject.next(true);
+            // setSessionToken already updates isLoggedInSubject
+          } else {
+            console.error('Registration failed:', response.message || response.error);
           }
         })
       );
@@ -151,9 +182,12 @@ export class AccountService {
     return this.http.post<LoginResponse>(`${API_BASE_URL}/auth/login`, credentials)
       .pipe(
         tap(response => {
+          console.log('Login response:', response);
           if (response.success && response.sessionId) {
             this.setSessionToken(response.sessionId);
-            this.isLoggedInSubject.next(true);
+            // setSessionToken already updates isLoggedInSubject
+          } else {
+            console.error('Login failed:', response.message || response.error);
           }
         })
       );
@@ -169,7 +203,7 @@ export class AccountService {
         tap(() => {
           this.clearSessionToken();
           this.clearUserInfoCache();
-          this.isLoggedInSubject.next(false);
+          // clearSessionToken already updates isLoggedInSubject
         })
       );
   }
@@ -294,6 +328,6 @@ export class AccountService {
   forceLogout(): void {
     this.clearSessionToken();
     this.clearUserInfoCache();
-    this.isLoggedInSubject.next(false);
+    // clearSessionToken already updates isLoggedInSubject
   }
 }
