@@ -10,6 +10,7 @@ import { AppConfig, DEFAULT_GUEST_CONFIG, DEFAULT_USER_CONFIG, UserConfig, Quick
 export class ConfigService {
   private readonly GUEST_CONFIG_KEY = 'helm_guest_config';
   private readonly OLD_CONFIG_KEY = 'helm_app_config'; // Legacy key
+  private readonly OFFLINE_BACKUP_KEY = 'helm_user_config_offline'; // Offline backup for logged-in users
   private readonly CONFIG_FILE_PATH = '/assets/config.json';
   
   private configSubject = new BehaviorSubject<AppConfig>(DEFAULT_GUEST_CONFIG);
@@ -255,11 +256,29 @@ export class ConfigService {
   }
 
   /**
-   * Load configuration - starts with guest configuration
+   * Load configuration - check for existing session first, then load appropriate config
    */
-  private loadConfig(): void {
+  private async loadConfig(): Promise<void> {
     try {
-      // Load guest configuration from localStorage or defaults
+      // First, try to load offline backup if user might be logged in
+      const hasOfflineBackup = localStorage.getItem(this.OFFLINE_BACKUP_KEY);
+      
+      if (hasOfflineBackup) {
+        try {
+          const offlineConfig = JSON.parse(hasOfflineBackup);
+          console.log('Found offline backup config, loading temporarily:', offlineConfig.userId);
+          this.configSubject.next(offlineConfig);
+          this.isInitialized.set(true);
+          
+          // Try to check session in the background
+          setTimeout(() => this.checkExistingSession(), 100);
+          return;
+        } catch (error) {
+          console.warn('Failed to parse offline backup config:', error);
+        }
+      }
+      
+      // Fallback to guest configuration
       const guestConfig = this.loadGuestConfig();
       this.configSubject.next(guestConfig);
       this.isInitialized.set(true);
@@ -377,12 +396,13 @@ export class ConfigService {
       await this.accountService.updateUserData(payload).toPromise();
       
       // For authenticated users, we DON'T save to the guest config localStorage key
-      // Instead, save to user-specific key as backup
+      // Instead, save to user-specific key AND offline backup
       const userConfigKey = `helm_user_config_${config.userId}`;
       const userConfig = { ...config, isGuest: false };
       localStorage.setItem(userConfigKey, JSON.stringify(userConfig));
+      localStorage.setItem(this.OFFLINE_BACKUP_KEY, JSON.stringify(userConfig));
       
-      console.log('User config saved to API and localStorage backup:', userConfigKey);
+      console.log('User config saved to API and localStorage backup:', userConfigKey, 'and offline backup');
     } catch (error) {
       console.error('Error saving user config to API:', error);
       
@@ -392,7 +412,8 @@ export class ConfigService {
           const userConfigKey = `helm_user_config_${config.userId}`;
           const userConfig = { ...config, isGuest: false };
           localStorage.setItem(userConfigKey, JSON.stringify(userConfig));
-          console.log('User config saved to localStorage fallback:', userConfigKey);
+          localStorage.setItem(this.OFFLINE_BACKUP_KEY, JSON.stringify(userConfig));
+          console.log('User config saved to localStorage fallback:', userConfigKey, 'and offline backup');
         }
       } catch (localError) {
         console.error('Error saving user config to localStorage:', localError);
@@ -441,6 +462,10 @@ export class ConfigService {
     try {
       // No syncing to server on logout - just switch to guest mode
       console.log('User signing out - switching to guest mode');
+
+      // Clear offline backup
+      localStorage.removeItem(this.OFFLINE_BACKUP_KEY);
+      console.log('Cleared offline backup config');
 
       // Load guest configuration
       const guestConfig = this.loadGuestConfig();
@@ -707,10 +732,11 @@ export class ConfigService {
     if (config.isGuest) {
       this.saveGuestConfig(config);
     } else if (config.userId) {
-      // Save to localStorage only, do not call API
+      // Save to user-specific key AND offline backup
       const userConfigKey = `helm_user_config_${config.userId}`;
       localStorage.setItem(userConfigKey, JSON.stringify(config));
-      console.log('User config saved to localStorage only:', userConfigKey);
+      localStorage.setItem(this.OFFLINE_BACKUP_KEY, JSON.stringify(config));
+      console.log('User config saved to localStorage only:', userConfigKey, 'and offline backup');
     }
   }
 
@@ -835,9 +861,11 @@ export class ConfigService {
         console.log('=== TRANSFORMATION DEBUG END ===');
         
         // Create server config with proper defaults
+        // Use username as userId if response.userId is not available
+        const actualUserId = response.userId || response.username || 'unknown';
         const serverConfigBase = {
           ...transformedData,
-          userId: response.userId || 'unknown',
+          userId: actualUserId,
           isGuest: false,
           lastUpdated: new Date().toISOString()
         };
@@ -848,7 +876,7 @@ export class ConfigService {
         
         // Merge with defaults to ensure all properties exist
         console.log('Merging server config with defaults to ensure all properties exist');
-        const finalConfig = this.mergeWithDefaults(serverConfigBase, { ...DEFAULT_USER_CONFIG, userId: response.userId || 'unknown', isGuest: false });
+        const finalConfig = this.mergeWithDefaults(serverConfigBase, { ...DEFAULT_USER_CONFIG, userId: actualUserId, isGuest: false });
         
         // Overwrite local config completely
         console.log('=== FINAL CONFIG DEBUG ===');
