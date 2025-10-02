@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 
 @Component({
   selector: 'app-search',
@@ -16,6 +16,7 @@ import { Component } from '@angular/core';
         </svg>
       </div>
       <input
+        #searchInput
         type="text"
         name="q"
         placeholder="Search Google..."
@@ -26,6 +27,15 @@ import { Component } from '@angular/core';
   `,
   styles: ``
 })
-export class SearchComponent {
+export class SearchComponent implements AfterViewInit {
+  @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
 
+  ngAfterViewInit() {
+    // Clear and focus the search input after the view initializes
+    // Use setTimeout to ensure it runs after Angular's change detection
+    setTimeout(() => {
+      this.searchInput.nativeElement.value = ''; // Clear any existing value
+      this.searchInput.nativeElement.focus();   // Focus for immediate typing
+    }, 100);
+  }
 }

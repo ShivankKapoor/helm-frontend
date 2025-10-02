@@ -34,6 +34,9 @@ export class App {
     // Set AccountService reference in ConfigService to avoid circular dependency
     this.configService.setAccountService(this.accountService);
     
+    // Check for existing session on app startup
+    setTimeout(() => this.configService.checkExistingSession(), 50);
+    
     // Subscribe to config changes for SEO updates
     this.configService.config$.subscribe(config => {
       this.seoService.updateSeoForCurrentState(config);
