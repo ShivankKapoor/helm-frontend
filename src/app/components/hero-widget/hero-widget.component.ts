@@ -43,7 +43,7 @@ import { HeroWidgetConfig } from '../../models/config.model';
   `,
   styles: [`
     .hero-widget {
-      position: fixed;
+      position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
