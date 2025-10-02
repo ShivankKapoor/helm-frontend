@@ -81,10 +81,10 @@ export class SeoService {
 
   // Method to update SEO based on current state
   updateSeoForCurrentState(config?: any) {
-    const baseTitle = 'HelmSeek';
+    const baseTitle = 'Helm Seek';
     const baseDescription = 'Helm is a powerful, customizable search dashboard with quick links, theme switching, and cloud sync. Streamline your browsing experience with personalized shortcuts and beautiful themes.';
     
-    // Update title - keep it simple as "HelmSeek"
+    // Update title - keep it simple as "Helm Seek"
     this.updateTitle(baseTitle);
     this.updateMetaDescription(baseDescription);
     
