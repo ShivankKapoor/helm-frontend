@@ -17,7 +17,7 @@ import { SeoService } from './services/seo.service';
   styleUrl: './app.scss'
 })
 export class App {
-  protected readonly title = signal('helm-frontend');
+  protected readonly title = signal('Helm Seek');
   protected readonly showSignInPopup = signal(false);
   protected readonly showUserInfoPopup = signal(false);
   protected readonly currentUsername = signal<string | null>(null);
