@@ -15,6 +15,10 @@ export class ConfigService {
   
   private configSubject = new BehaviorSubject<AppConfig>(DEFAULT_GUEST_CONFIG);
   private isInitialized = signal(false);
+  private isCheckingSession = false; // Guard to prevent multiple concurrent session checks
+  private isSyncing = false; // Guard to prevent multiple concurrent sync operations
+  private lastSessionCheck = 0; // Timestamp of last session check
+  private readonly SESSION_CHECK_COOLDOWN = 10000; // 10 seconds cooldown between session checks
   
   public config$ = this.configSubject.asObservable();
   private accountService: any; // Will be set after construction to avoid circular dependency
@@ -28,12 +32,28 @@ export class ConfigService {
    * Check if user has an existing session and restore authenticated state
    */
   async checkExistingSession(): Promise<void> {
-    if (!this.accountService) {
-      console.warn('AccountService not available for session check');
+    // Prevent multiple concurrent session checks
+    if (this.isCheckingSession) {
+      console.log('Session check already in progress, skipping...');
       return;
     }
-
+    
+    // Prevent too frequent session checks
+    const now = Date.now();
+    if (now - this.lastSessionCheck < this.SESSION_CHECK_COOLDOWN) {
+      console.log('Session check too recent, skipping...');
+      return;
+    }
+    
+    this.isCheckingSession = true;
+    this.lastSessionCheck = now;
+    
     try {
+      if (!this.accountService) {
+        console.warn('AccountService not available for session check');
+        return;
+      }
+
       // Check if there's a session token
       const hasToken = this.accountService.isAuthenticated();
       console.log('Checking existing session - has token:', hasToken);
@@ -69,6 +89,8 @@ export class ConfigService {
       console.error('Error checking existing session:', error);
       // If there's an error, clear any invalid tokens
       this.accountService.forceLogout();
+    } finally {
+      this.isCheckingSession = false;
     }
   }
 
@@ -77,8 +99,8 @@ export class ConfigService {
    */
   setAccountService(accountService: any): void {
     this.accountService = accountService;
-    // Check for existing session after AccountService is available
-    this.checkExistingSession();
+    // Session check will be handled by app constructor with proper timing
+    console.log('AccountService set, session check will be handled by app constructor');
   }
 
   /**
@@ -270,8 +292,7 @@ export class ConfigService {
           this.configSubject.next(offlineConfig);
           this.isInitialized.set(true);
           
-          // Try to check session in the background
-          setTimeout(() => this.checkExistingSession(), 100);
+          // Session check will be handled by app constructor, no need to duplicate here
           return;
         } catch (error) {
           console.warn('Failed to parse offline backup config:', error);
@@ -834,6 +855,14 @@ export class ConfigService {
    * Load configuration from the server and apply it locally
    */
   async syncFromServer(): Promise<boolean> {
+    // Prevent multiple concurrent sync operations
+    if (this.isSyncing) {
+      console.log('Sync operation already in progress, skipping...');
+      return false;
+    }
+    
+    this.isSyncing = true;
+    
     try {
       console.log('syncFromServer: Overwriting local config with server config');
       
@@ -903,6 +932,8 @@ export class ConfigService {
     } catch (error) {
       console.error('Failed to overwrite local config with server config:', error);
       return false;
+    } finally {
+      this.isSyncing = false;
     }
   }
 

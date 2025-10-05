@@ -3,7 +3,7 @@ const API_BASE_URL = 'https://api.helmseek.com';
 
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, BehaviorSubject, tap, catchError } from 'rxjs';
+import { Observable, BehaviorSubject, tap, catchError, of } from 'rxjs';
 
 // API Response Interfaces
 interface ApiResponse {
@@ -63,6 +63,11 @@ export class AccountService {
   
   // Cache for user info
   private cachedUserInfo: { username?: string; userId?: string } | null = null;
+  
+  // Cache for API responses with TTL
+  private userDataCache: { data: any; timestamp: number } | null = null;
+  private usernameCache: { data: any; timestamp: number } | null = null;
+  private readonly CACHE_TTL = 30000; // 30 seconds cache
 
   constructor(private http: HttpClient) {
     // Defer initial session check to avoid timing issues
@@ -215,6 +220,12 @@ export class AccountService {
    * Get current user's data
    */
   getUserData(): Observable<UserDataResponse> {
+    // Check cache first
+    if (this.userDataCache && (Date.now() - this.userDataCache.timestamp) < this.CACHE_TTL) {
+      console.log('Returning cached user data');
+      return of(this.userDataCache.data);
+    }
+    
     const headers = this.getAuthHeaders();
     console.log('Making GET request to /api/get with headers:', headers.keys());
     console.log('SessionToken header value:', headers.get('sessionToken'));
@@ -222,6 +233,11 @@ export class AccountService {
       .pipe(
         tap(response => {
           console.log('GET /api/get response:', response);
+          // Cache the response
+          this.userDataCache = {
+            data: response,
+            timestamp: Date.now()
+          };
         }),
         catchError((error: any) => {
           console.error('GET /api/get error:', error);
@@ -236,6 +252,12 @@ export class AccountService {
    * Get current user's username from the correct endpoint
    */
   getUsername(): Observable<UsernameResponse> {
+    // Check cache first
+    if (this.usernameCache && (Date.now() - this.usernameCache.timestamp) < this.CACHE_TTL) {
+      console.log('Returning cached username data');
+      return of(this.usernameCache.data);
+    }
+    
     const headers = this.getAuthHeaders();
     console.log('Making GET request to /api/username with headers:', headers.keys());
     console.log('SessionToken header value:', headers.get('sessionToken'));
@@ -243,6 +265,11 @@ export class AccountService {
       .pipe(
         tap(response => {
           console.log('GET /api/username response:', response);
+          // Cache the response
+          this.usernameCache = {
+            data: response,
+            timestamp: Date.now()
+          };
         }),
         catchError((error: any) => {
           console.error('GET /api/username error:', error);
@@ -369,7 +396,11 @@ export class AccountService {
    */
   forceLogout(): void {
     this.clearSessionToken();
-    this.clearUserInfoCache();
-    // clearSessionToken already updates isLoggedInSubject
+    this.isLoggedInSubject.next(false);
+    this.cachedUserInfo = null;
+    // Clear API caches on logout
+    this.userDataCache = null;
+    this.usernameCache = null;
+    console.log('User logged out and caches cleared');
   }
 }
