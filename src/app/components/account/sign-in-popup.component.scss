@@ -151,6 +151,10 @@
   font-size: 14px;
   font-family: "Fira Code", monospace;
   text-align: center;
+  word-wrap: break-word;
+  max-height: 100px;
+  overflow-y: auto;
+  line-height: 1.4;
 }
 
 .form-actions {

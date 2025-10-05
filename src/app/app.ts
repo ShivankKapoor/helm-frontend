@@ -114,12 +114,30 @@ export class App {
         
         this.signInPopup?.handleSignInResponse(true);
       } else {
-        console.error('Login failed:', response?.message);
-        this.signInPopup?.handleSignInResponse(false, response?.message || 'Login failed');
+        console.error('Login failed:', response?.message || response?.error);
+        // Use API response message, error, or details for better user feedback
+        const errorMessage = response?.message || response?.error || response?.details || 'Login failed';
+        this.signInPopup?.handleSignInResponse(false, errorMessage);
       }
     } catch (error: any) {
       console.error('Login error:', error);
-      this.signInPopup?.handleSignInResponse(false, 'Network error. Please try again.');
+      // Try to extract error message from API response in catch block
+      let errorMessage = 'Network error. Please try again.';
+      
+      if (error?.error) {
+        // If it's an HTTP error with a response body
+        if (typeof error.error === 'string') {
+          errorMessage = error.error;
+        } else if (error.error.message) {
+          errorMessage = error.error.message;
+        } else if (error.error.error) {
+          errorMessage = error.error.error;
+        }
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      this.signInPopup?.handleSignInResponse(false, errorMessage);
     }
   }
 
