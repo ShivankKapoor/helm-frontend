@@ -15,8 +15,6 @@ import { QuickLinkConfig, QuickLinksConfig } from '../../models/config.model';
         <a 
           [href]="link.url"
           [class]="'quick-link quick-link-top-left'"
-          target="_blank"
-          rel="noopener noreferrer"
           [title]="link.url"
         >
           {{ link.text }}
@@ -30,8 +28,6 @@ import { QuickLinkConfig, QuickLinksConfig } from '../../models/config.model';
         <a 
           [href]="link.url"
           [class]="'quick-link quick-link-top-right'"
-          target="_blank"
-          rel="noopener noreferrer"
           [title]="link.url"
         >
           {{ link.text }}
@@ -45,8 +41,6 @@ import { QuickLinkConfig, QuickLinksConfig } from '../../models/config.model';
         <a 
           [href]="link.url"
           [class]="'quick-link quick-link-bottom-left'"
-          target="_blank"
-          rel="noopener noreferrer"
           [title]="link.url"
         >
           {{ link.text }}
