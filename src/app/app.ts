@@ -179,4 +179,8 @@ export class App {
       await this.configService.onUserSignOut();
     }
   }
+
+  getCurrentYear(): number {
+    return new Date().getFullYear();
+  }
 }
