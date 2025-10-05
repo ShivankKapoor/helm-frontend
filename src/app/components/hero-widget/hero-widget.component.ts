@@ -126,6 +126,11 @@ import { HeroWidgetConfig } from '../../models/config.model';
         padding: 0 15px;
       }
       
+      /* Extra spacing for 'both' mode which has more content */
+      .hero-both {
+        margin-top: -130px;
+      }
+      
       .time {
         font-size: 2rem;
       }
@@ -153,6 +158,11 @@ import { HeroWidgetConfig } from '../../models/config.model';
         padding: 0 10px;
       }
       
+      /* Extra spacing for 'both' mode on small mobile screens */
+      .hero-both {
+        margin-top: -110px;
+      }
+      
       .time {
         font-size: 1.6rem;
       }
@@ -171,6 +181,113 @@ import { HeroWidgetConfig } from '../../models/config.model';
       
       .date {
         font-size: 0.75rem;
+      }
+    }
+    
+    /* Extra small screens - further adjustments */
+    @media (max-width: 360px) {
+      .hero-widget {
+        margin-top: -70px;
+      }
+      
+      .hero-both {
+        margin-top: -95px;
+      }
+      
+      .time {
+        font-size: 1.4rem;
+      }
+      
+      .greeting-text {
+        font-size: 1.1rem;
+      }
+      
+      .greeting-name {
+        font-size: 1.3rem;
+      }
+      
+      .hero-both .time {
+        font-size: 1.2rem;
+      }
+      
+      .date {
+        font-size: 0.7rem;
+      }
+    }
+    
+    /* Landscape orientation adjustments for mobile */
+    @media (max-height: 500px) and (orientation: landscape) {
+      .hero-widget {
+        margin-top: -60px;
+        transform: translate(-50%, -50%) scale(0.9);
+      }
+      
+      .hero-both {
+        margin-top: -75px;
+      }
+      
+      .time {
+        font-size: 1.4rem;
+      }
+      
+      .greeting-text {
+        font-size: 1.1rem;
+      }
+      
+      .greeting-name {
+        font-size: 1.4rem;
+      }
+      
+      .hero-both .time {
+        font-size: 1.2rem;
+      }
+      
+      .date {
+        font-size: 0.7rem;
+      }
+      
+      .hero-clock,
+      .hero-greeting,
+      .hero-both {
+        gap: 4px;
+      }
+    }
+    
+    /* Very short landscape screens */
+    @media (max-height: 400px) and (orientation: landscape) {
+      .hero-widget {
+        margin-top: -45px;
+        transform: translate(-50%, -50%) scale(0.8);
+      }
+      
+      .hero-both {
+        margin-top: -60px;
+      }
+      
+      .time {
+        font-size: 1.2rem;
+      }
+      
+      .greeting-text {
+        font-size: 1rem;
+      }
+      
+      .greeting-name {
+        font-size: 1.2rem;
+      }
+      
+      .hero-both .time {
+        font-size: 1rem;
+      }
+      
+      .date {
+        font-size: 0.65rem;
+      }
+      
+      .hero-clock,
+      .hero-greeting,
+      .hero-both {
+        gap: 2px;
       }
     }
     
