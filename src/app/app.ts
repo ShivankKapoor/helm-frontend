@@ -118,9 +118,13 @@ export class App {
         
         this.signInPopup?.handleSignInResponse(true);
         
-        // Refresh the page after successful login to ensure clean state
+        // Refresh the page twice after successful login to ensure clean state
         setTimeout(() => {
           window.location.reload();
+          // Second refresh after a brief delay
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
         }, 500); // Small delay to allow sign-in popup to close gracefully
         
       } else {
