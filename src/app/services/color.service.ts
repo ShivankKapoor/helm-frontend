@@ -67,7 +67,27 @@ export class ColorService {
     if (typeof document !== 'undefined') {
       document.documentElement.style.setProperty('--button-bg', color.bg);
       document.documentElement.style.setProperty('--button-hover', color.hover);
+      
+      // Convert hex to RGB for opacity effects
+      const bgRgb = this.hexToRgb(color.bg);
+      const hoverRgb = this.hexToRgb(color.hover);
+      
+      if (bgRgb) {
+        document.documentElement.style.setProperty('--button-bg-rgb', `${bgRgb.r}, ${bgRgb.g}, ${bgRgb.b}`);
+      }
+      if (hoverRgb) {
+        document.documentElement.style.setProperty('--button-hover-rgb', `${hoverRgb.r}, ${hoverRgb.g}, ${hoverRgb.b}`);
+      }
     }
+  }
+
+  private hexToRgb(hex: string): {r: number, g: number, b: number} | null {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : null;
   }
 
   private saveColor(colorValue: string): void {

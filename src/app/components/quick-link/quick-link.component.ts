@@ -16,8 +16,11 @@ import { QuickLinkConfig, QuickLinksConfig } from '../../models/config.model';
           [href]="link.url"
           [class]="'quick-link quick-link-top-left'"
           [title]="link.url"
+          (mousemove)="onMouseMove($event)"
+          (mouseleave)="onMouseLeave($event)"
         >
-          {{ link.text }}
+          <span class="link-text">{{ link.text }}</span>
+          <div class="shine-effect"></div>
         </a>
       }
     </div>
@@ -29,8 +32,11 @@ import { QuickLinkConfig, QuickLinksConfig } from '../../models/config.model';
           [href]="link.url"
           [class]="'quick-link quick-link-top-right'"
           [title]="link.url"
+          (mousemove)="onMouseMove($event)"
+          (mouseleave)="onMouseLeave($event)"
         >
-          {{ link.text }}
+          <span class="link-text">{{ link.text }}</span>
+          <div class="shine-effect"></div>
         </a>
       }
     </div>
@@ -42,8 +48,11 @@ import { QuickLinkConfig, QuickLinksConfig } from '../../models/config.model';
           [href]="link.url"
           [class]="'quick-link quick-link-bottom-left'"
           [title]="link.url"
+          (mousemove)="onMouseMove($event)"
+          (mouseleave)="onMouseLeave($event)"
         >
-          {{ link.text }}
+          <span class="link-text">{{ link.text }}</span>
+          <div class="shine-effect"></div>
         </a>
       }
     </div>
@@ -88,19 +97,75 @@ import { QuickLinkConfig, QuickLinksConfig } from '../../models/config.model';
       font-size: 15px;
       font-weight: 400;
       font-family: 'Fira Code', 'SF Mono', Monaco, Inconsolata, 'Roboto Mono', Consolas, 'Courier New', monospace;
-      transition: all 0.2s ease;
-      border-radius: 2px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 6px;
+      display: block;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid transparent;
+      transform: translateY(0) scale(1);
+      box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+    }
+    
+    .link-text {
+      position: relative;
+      z-index: 2;
       display: block;
     }
     
+    .shine-effect {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(
+        circle 30px at var(--mouse-x, 50%) var(--mouse-y, 50%),
+        rgba(var(--button-bg-rgb, 26, 115, 232), 0.4) 0%,
+        rgba(var(--button-bg-rgb, 26, 115, 232), 0.2) 30%,
+        transparent 70%
+      );
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+      z-index: 1;
+    }
+    
+    .quick-link::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(var(--button-bg-rgb, 26, 115, 232), 0.1), transparent);
+      opacity: 0;
+      transition: all 0.6s ease;
+      z-index: 0;
+    }
+    
     .quick-link:hover {
-      color: var(--text-color, #000);
-      text-decoration: underline;
-      background: rgba(0, 0, 0, 0.04);
+      color: var(--button-bg, #1a73e8);
+      text-decoration: none;
+      background: rgba(var(--button-bg-rgb, 26, 115, 232), 0.1);
+      border-color: var(--button-bg, #1a73e8);
+      transform: translateY(-2px) scale(1.05);
+      box-shadow: 
+        0 4px 12px rgba(var(--button-bg-rgb, 26, 115, 232), 0.25),
+        0 0 20px rgba(var(--button-bg-rgb, 26, 115, 232), 0.15);
+      font-weight: 500;
+    }
+    
+    .quick-link:hover::before {
+      left: 100%;
+      opacity: 0.8;
     }
     
     .quick-link:active {
-      background: rgba(0, 0, 0, 0.08);
+      transform: translateY(0) scale(0.98);
+      box-shadow: 
+        0 2px 6px rgba(var(--button-bg-rgb, 26, 115, 232), 0.3),
+        0 0 10px rgba(var(--button-bg-rgb, 26, 115, 232), 0.2);
     }
     
     /* Responsive adjustments */
@@ -131,19 +196,24 @@ import { QuickLinkConfig, QuickLinksConfig } from '../../models/config.model';
       }
     }
     
-    /* Dark mode adjustments - white text like Google */
+    /* Dark mode adjustments */
     :host-context(.dark) .quick-link {
       color: #fff;
     }
     
     :host-context(.dark) .quick-link:hover {
-      color: #fff;
-      text-decoration: underline;
-      background: rgba(255, 255, 255, 0.08);
+      color: var(--button-bg, #1a73e8);
+      background: rgba(var(--button-bg-rgb, 26, 115, 232), 0.15);
+      border-color: var(--button-bg, #1a73e8);
+      box-shadow: 
+        0 4px 12px rgba(var(--button-bg-rgb, 26, 115, 232), 0.3),
+        0 0 20px rgba(var(--button-bg-rgb, 26, 115, 232), 0.2);
     }
     
     :host-context(.dark) .quick-link:active {
-      background: rgba(255, 255, 255, 0.12);
+      box-shadow: 
+        0 2px 6px rgba(var(--button-bg-rgb, 26, 115, 232), 0.35),
+        0 0 10px rgba(var(--button-bg-rgb, 26, 115, 232), 0.25);
     }
   `]
 })
@@ -203,5 +273,33 @@ export class QuickLinkComponent implements OnInit, OnDestroy {
     return this.quickLinksConfig.links
       .filter(link => link.corner === corner && link.enabled)
       .sort((a, b) => a.order - b.order);
+  }
+
+  /**
+   * Handle mouse move for responsive shine effect
+   */
+  onMouseMove(event: MouseEvent): void {
+    const target = event.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    
+    const shineEffect = target.querySelector('.shine-effect') as HTMLElement;
+    if (shineEffect) {
+      shineEffect.style.setProperty('--mouse-x', `${x}px`);
+      shineEffect.style.setProperty('--mouse-y', `${y}px`);
+      shineEffect.style.opacity = '1';
+    }
+  }
+
+  /**
+   * Handle mouse leave to fade out shine effect
+   */
+  onMouseLeave(event: MouseEvent): void {
+    const target = event.currentTarget as HTMLElement;
+    const shineEffect = target.querySelector('.shine-effect') as HTMLElement;
+    if (shineEffect) {
+      shineEffect.style.opacity = '0';
+    }
   }
 }
