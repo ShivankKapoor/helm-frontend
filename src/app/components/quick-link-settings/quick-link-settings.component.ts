@@ -42,18 +42,19 @@ import { QuickLinkConfig } from '../../models/config.model';
             <small>Must be a valid URL starting with http:// or https://</small>
           </div>
 
-          <div class="setting-item">
+                    <div class="setting-item">
             <label>Position</label>
                       <div class="position-grid">
-            <button 
-              *ngFor="let pos of positions" 
-              [class]="'position-btn ' + (linkCorner === pos.value ? 'active' : '')"
-              (click)="onCornerChange(pos.value)"
-              [title]="pos.label"
-            >
-              <i [class]="pos.icon"></i>
-              <span>{{ pos.short }}</span>
-            </button>
+            @for (pos of positions; track pos.value) {
+              <button 
+                [class]="'position-btn ' + (linkCorner === pos.value ? 'active' : '')"
+                (click)="onCornerChange(pos.value)"
+                [title]="pos.label"
+              >
+                <i [class]="pos.icon"></i>
+                <span>{{ pos.short }}</span>
+              </button>
+            }
             <!-- Note: Bottom-right is reserved for Settings & Account buttons -->
             <div class="reserved-position">
               <i class="bi bi-gear-fill"></i>
@@ -63,14 +64,16 @@ import { QuickLinkConfig } from '../../models/config.model';
           </div>
           </div>
 
-          <div class="preview-section" *ngIf="linkText && linkUrl">
-            <label>Preview</label>
-            <div class="preview-container">
-              <div [class]="'preview-link preview-' + linkCorner">
-                {{ linkText }}
+          @if (linkText && linkUrl) {
+            <div class="preview-section">
+              <label>Preview</label>
+              <div class="preview-container">
+                <div [class]="'preview-link preview-' + linkCorner">
+                  {{ linkText }}
+                </div>
               </div>
             </div>
-          </div>
+          }
         </div>
         
         <div class="modal-footer">

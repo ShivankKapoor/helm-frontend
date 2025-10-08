@@ -2,7 +2,7 @@ import { Injectable, signal, Inject, forwardRef } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, of } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
-import { AppConfig, DEFAULT_GUEST_CONFIG, DEFAULT_USER_CONFIG, UserConfig, QuickLinkConfig, QuickLinksConfig, HeroWidgetConfig } from '../models/config.model';
+import { AppConfig, DEFAULT_GUEST_CONFIG, DEFAULT_USER_CONFIG, UserConfig, QuickLinkConfig, QuickLinksConfig, HeroWidgetConfig, WeatherWidgetConfig } from '../models/config.model';
 
 @Injectable({
   providedIn: 'root'
@@ -525,6 +525,10 @@ export class ConfigService {
         heroWidget: {
           ...defaults.user.heroWidget,
           ...config.user?.heroWidget
+        },
+        weatherWidget: {
+          ...defaults.user.weatherWidget,
+          ...config.user?.weatherWidget
         }
       }
     };
@@ -723,6 +727,33 @@ export class ConfigService {
       enabled
     };
     this.updateQuickLinks(updatedQuickLinks);
+  }
+
+  /**
+   * Update weather widget configuration
+   */
+  updateWeatherWidget(weatherWidget: Partial<WeatherWidgetConfig>): void {
+    const currentConfig = this.currentConfig;
+    const updatedWeatherWidget = {
+      ...currentConfig.user.weatherWidget,
+      ...weatherWidget
+    };
+    
+    this.updateUserConfig({
+      weatherWidget: updatedWeatherWidget
+    });
+  }
+
+  /**
+   * Toggle weather widget enabled state
+   */
+  toggleWeatherWidget(enabled: boolean): void {
+    const currentConfig = this.currentConfig;
+    const updatedWeatherWidget: WeatherWidgetConfig = {
+      ...currentConfig.user.weatherWidget,
+      enabled
+    };
+    this.updateWeatherWidget(updatedWeatherWidget);
   }
 
   /**

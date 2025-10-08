@@ -4,7 +4,8 @@ import { ThemeService } from '../../services/theme.service';
 import { ColorService } from '../../services/color.service';
 import { ConfigService } from '../../services/config.service';
 import { AccountService } from '../../services/account.service';
-import { QuickLinkConfig, QuickLinksConfig, HeroWidgetConfig } from '../../models/config.model';
+import { WeatherService, GeocodeResult } from '../../services/weather.service';
+import { QuickLinkConfig, QuickLinksConfig, HeroWidgetConfig, WeatherWidgetConfig } from '../../models/config.model';
 import { QuickLinkSettingsComponent } from '../quick-link-settings/quick-link-settings.component';
 
 @Component({
@@ -120,6 +121,102 @@ import { QuickLinkSettingsComponent } from '../quick-link-settings/quick-link-se
                         <small class="setting-hint">Custom name for greeting (e.g., "Good Morning, Alex")</small>
                       </div>
                     }
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- Weather Widget Section -->
+            <div class="setting-section">
+              <label>Weather Widget</label>
+              <div class="weather-widget-manager">
+                <label class="toggle-row">
+                  <input 
+                    type="checkbox" 
+                    [(ngModel)]="weatherWidgetEnabled"
+                    (ngModelChange)="onWeatherWidgetEnabledChange($event)"
+                  >
+                  <span>Enable Weather Widget</span>
+                </label>
+                
+                @if (weatherWidgetEnabled) {
+                  <div class="weather-widget-options">
+                    <div class="setting-row">
+                      <label for="weather-zipcode">Zip Code</label>
+                      <div class="input-with-button">
+                        <input 
+                          id="weather-zipcode"
+                          type="text" 
+                          class="setting-input"
+                          [(ngModel)]="weatherZipCode"
+                          (ngModelChange)="onWeatherZipCodeInput($event)"
+                          (focus)="onWeatherZipCodeFocus()"
+                          (blur)="onWeatherZipCodeBlur()"
+                          placeholder="Enter zip code (e.g., 75035)"
+                          maxlength="10"
+                        >
+                        <button 
+                          type="button"
+                          class="save-location-btn"
+                          (click)="saveWeatherLocation()"
+                          [disabled]="!weatherZipCode.trim() || isValidatingWeather || !hasWeatherChanges()"
+                          [title]="hasWeatherChanges() ? 'Save and validate location' : 'No changes to save'"
+                        >
+                          @if (isValidatingWeather) {
+                            <i class="bi bi-arrow-clockwise spin"></i>
+                            <span>Saving...</span>
+                          } @else {
+                            <i class="bi bi-geo-alt"></i>
+                            <span>Save Location</span>
+                          }
+                        </button>
+                      </div>
+                      <small class="setting-hint">Enter your zip code and click "Save Location" to get local weather</small>
+                      @if (weatherValidationMessage()) {
+                        <div class="validation-message" [class]="weatherValidationType()">
+                          {{ weatherValidationMessage() }}
+                        </div>
+                      }
+                    </div>
+                    
+                    @if (weatherCity()) {
+                      <div class="setting-row">
+                        <label>Location</label>
+                        <div class="location-info">
+                          <i class="bi bi-geo-alt"></i>
+                          <span>{{ weatherCity() }}</span>
+                        </div>
+                      </div>
+                    }
+                    
+                    <div class="setting-row">
+                      <label>Widget Position</label>
+                      <div class="weather-position-grid">
+                        @for (pos of weatherPositions; track pos.value) {
+                          <button 
+                            type="button"
+                            [class]="'weather-position-btn ' + (weatherCorner === pos.value ? 'active' : '')"
+                            (click)="onWeatherCornerChange(pos.value)"
+                            [title]="pos.label"
+                          >
+                            <i [class]="pos.icon"></i>
+                            <span>{{ pos.short }}</span>
+                          </button>
+                        }
+                      </div>
+                      <small class="setting-hint">Choose where the weather widget appears on your screen</small>
+                      
+                      @if (weatherWidgetEnabled && weatherZipCode) {
+                        <div class="weather-preview-section">
+                          <div class="weather-preview-container">
+                            <div [class]="'weather-preview-widget weather-preview-' + weatherCorner">
+                              <i class="bi bi-thermometer-half"></i>
+                              <span>{{ weatherCity() || 'Weather' }}</span>
+                            </div>
+                          </div>
+                        </div>
+                      }
+                    </div>
                   </div>
                 }
               </div>
@@ -682,10 +779,240 @@ import { QuickLinkSettingsComponent } from '../quick-link-settings/quick-link-se
       border-color: #5a2d2d;
     }
     
-    /* Dark mode hero widget styles */
-    :host-context(.dark) .hero-widget-options {
+    /* Weather Widget Styles */
+    .weather-widget-manager {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    
+    .weather-widget-options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-left: 1.5rem;
+      padding: 0.75rem;
+      border-left: 2px solid var(--border-color, #e0e0e0);
+      background: var(--section-bg, rgba(0, 0, 0, 0.02));
+      border-radius: 0 4px 4px 0;
+    }
+    
+    .weather-position-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 0.5rem;
+    }
+    
+    .weather-position-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 12px 8px;
+      border: 2px solid var(--border-color, #e0e0e0);
+      border-radius: 8px;
+      background: var(--button-secondary-bg, #f8f9fa);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 0.8rem;
+      color: var(--text-color, #333);
+    }
+    
+    .weather-position-btn:hover {
+      border-color: var(--button-bg, #1a73e8);
+      background: var(--button-secondary-hover, #e3f2fd);
+    }
+    
+    .weather-position-btn.active {
+      border-color: var(--button-bg, #1a73e8);
+      background: var(--button-bg, #1a73e8);
+      color: white;
+    }
+    
+    .weather-position-btn i {
+      font-size: 1.2rem;
+    }
+    
+    .weather-preview-section {
+      margin-top: 1rem;
+    }
+    
+    .weather-preview-container {
+      position: relative;
+      height: 100px;
+      border: 2px dashed var(--border-color, #ccc);
+      border-radius: 8px;
+      background: var(--preview-bg, #f8f9fa);
+    }
+    
+    .weather-preview-widget {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--button-bg, #1a73e8);
+      color: white;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .weather-preview-top-left {
+      top: 8px;
+      left: 8px;
+    }
+    
+    .weather-preview-top-right {
+      top: 8px;
+      right: 8px;
+    }
+    
+    .weather-preview-bottom-left {
+      bottom: 8px;
+      left: 8px;
+    }
+    
+    .weather-preview-bottom-right {
+      bottom: 8px;
+      right: 8px;
+    }
+    
+    .location-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 8px 12px;
+      background: var(--success-bg, #d4edda);
+      border: 1px solid var(--success-border, #c3e6cb);
+      border-radius: 4px;
+      color: var(--success-text, #155724);
+      font-size: 0.875rem;
+    }
+    
+    .input-with-button {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    
+    .input-with-button .setting-input {
+      flex: 1;
+    }
+    
+    .save-location-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      background: var(--button-bg, #1a73e8);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    
+    .save-location-btn:hover:not(:disabled) {
+      background: var(--button-hover-bg, #1557b0);
+      transform: translateY(-1px);
+    }
+    
+    .save-location-btn:disabled {
+      background: var(--button-disabled-bg, #ccc);
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .save-location-btn .spin {
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    
+    .validation-message {
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      margin-top: 0.25rem;
+    }
+    
+    .validation-message.success {
+      background: var(--success-bg, #d4edda);
+      color: var(--success-text, #155724);
+      border: 1px solid var(--success-border, #c3e6cb);
+    }
+    
+    .validation-message.error {
+      background: var(--error-bg, #f8d7da);
+      color: var(--error-text, #721c24);
+      border: 1px solid var(--error-border, #f5c6cb);
+    }
+    
+    .validation-message.info {
+      background: var(--info-bg, #d1ecf1);
+      color: var(--info-text, #0c5460);
+      border: 1px solid var(--info-border, #bee5eb);
+    }
+
+    /* Dark mode weather widget styles */
+    :host-context(.dark) .weather-widget-options {
       background: rgba(255, 255, 255, 0.05);
       border-left-color: var(--border-color, #555);
+    }
+    
+    :host-context(.dark) .weather-position-btn {
+      background: var(--button-secondary-bg, #333);
+      border-color: var(--border-color, #555);
+      color: var(--text-color, #e0e0e0);
+    }
+    
+    :host-context(.dark) .weather-position-btn:hover {
+      background: var(--button-secondary-hover, #404040);
+      border-color: var(--button-bg, #1a73e8);
+    }
+    
+    :host-context(.dark) .weather-position-btn.active {
+      background: var(--button-bg, #1a73e8);
+      border-color: var(--button-bg, #1a73e8);
+      color: white;
+    }
+    
+    :host-context(.dark) .location-info {
+      background: rgba(40, 167, 69, 0.2);
+      border-color: rgba(40, 167, 69, 0.3);
+      color: #a7d4b4;
+    }
+    
+    :host-context(.dark) .weather-preview-container {
+      background: var(--preview-bg, #333);
+      border-color: var(--border-color, #555);
+    }
+    
+    :host-context(.dark) .validation-message.success {
+      background: rgba(40, 167, 69, 0.2);
+      color: #a7d4b4;
+      border-color: rgba(40, 167, 69, 0.3);
+    }
+    
+    :host-context(.dark) .validation-message.error {
+      background: rgba(220, 53, 69, 0.2);
+      color: #d4a7a7;
+      border-color: rgba(220, 53, 69, 0.3);
+    }
+    
+    :host-context(.dark) .validation-message.info {
+      background: rgba(23, 162, 184, 0.2);
+      color: #a7c7d4;
+      border-color: rgba(23, 162, 184, 0.3);
     }
     
     :host-context(.dark) .setting-row label {
@@ -709,6 +1036,7 @@ export class SettingsComponent {
   colorService = inject(ColorService);
   configService = inject(ConfigService);
   accountService = inject(AccountService);
+  weatherService = inject(WeatherService);
   isOpen = signal(false);
   showQuickLinkSettings = signal(false);
   
@@ -735,6 +1063,24 @@ export class SettingsComponent {
   heroShowSeconds = false;
   heroGreetingName = '';
 
+  // Weather Widget properties
+  weatherWidgetEnabled = false;
+  weatherZipCode = '';
+  originalWeatherZipCode = ''; // Track original value to detect changes
+  isEditingWeatherZipCode = false; // Track if user is actively editing
+  weatherCorner: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' = 'top-right';
+  weatherCity = signal('');
+  weatherValidationMessage = signal('');
+  weatherValidationType = signal<'success' | 'error' | 'info'>('info');
+  isValidatingWeather = false;
+
+  weatherPositions = [
+    { value: 'top-left' as const, label: 'Top Left', short: 'TL', icon: 'bi bi-arrow-up-left' },
+    { value: 'top-right' as const, label: 'Top Right', short: 'TR', icon: 'bi bi-arrow-up-right' },
+    { value: 'bottom-left' as const, label: 'Bottom Left', short: 'BL', icon: 'bi bi-arrow-down-left' },
+    { value: 'bottom-right' as const, label: 'Bottom Right', short: 'BR', icon: 'bi bi-arrow-down-right' }
+  ];
+
   constructor() {
     // Set AccountService reference in ConfigService to avoid circular dependency
     this.configService.setAccountService(this.accountService);
@@ -756,6 +1102,19 @@ export class SettingsComponent {
         this.heroClockFormat = config.user.heroWidget.clockFormat;
         this.heroShowSeconds = config.user.heroWidget.showSeconds;
         this.heroGreetingName = config.user.heroWidget.greetingName;
+      }
+      
+      if (config?.user?.weatherWidget) {
+        this.weatherWidgetEnabled = config.user.weatherWidget.enabled;
+        
+        // Only update zip code if user isn't actively editing it
+        if (!this.isEditingWeatherZipCode) {
+          this.weatherZipCode = config.user.weatherWidget.zipCode;
+          this.originalWeatherZipCode = config.user.weatherWidget.zipCode; // Track original value
+        }
+        
+        this.weatherCorner = config.user.weatherWidget.corner;
+        this.weatherCity.set(config.user.weatherWidget.city);
       }
     });
   }
@@ -848,6 +1207,99 @@ export class SettingsComponent {
 
   onHeroGreetingNameChange(greetingName: string) {
     this.configService.updateHeroWidget({ greetingName });
+  }
+
+  // Weather Widget methods
+  onWeatherWidgetEnabledChange(enabled: boolean) {
+    this.configService.toggleWeatherWidget(enabled);
+  }
+
+  onWeatherZipCodeInput(zipCode: string) {
+    // Mark as actively editing
+    this.isEditingWeatherZipCode = true;
+    
+    // Just update the input field, no API calls
+    this.weatherZipCode = zipCode;
+    
+    // Clear validation messages when user types
+    if (this.weatherValidationMessage()) {
+      this.weatherValidationMessage.set('');
+    }
+  }
+
+  onWeatherZipCodeFocus() {
+    this.isEditingWeatherZipCode = true;
+  }
+
+  onWeatherZipCodeBlur() {
+    // Small delay to allow for button clicks
+    setTimeout(() => {
+      this.isEditingWeatherZipCode = false;
+    }, 100);
+  }
+
+  hasWeatherChanges(): boolean {
+    return this.weatherZipCode.trim() !== this.originalWeatherZipCode.trim();
+  }
+
+  async saveWeatherLocation() {
+    const zipCode = this.weatherZipCode.trim();
+    
+    if (!zipCode) {
+      this.weatherValidationMessage.set('Please enter a zip code');
+      this.weatherValidationType.set('error');
+      return;
+    }
+
+    // Validate zip code format (basic)
+    if (!/^\d{5}(-\d{4})?$/.test(zipCode)) {
+      this.weatherValidationMessage.set('Please enter a valid 5-digit zip code');
+      this.weatherValidationType.set('error');
+      return;
+    }
+
+    this.isValidatingWeather = true;
+    this.weatherValidationMessage.set('Validating location...');
+    this.weatherValidationType.set('info');
+
+    try {
+      const locationResult = await this.weatherService.getLocationFromZipCode(zipCode).toPromise();
+      
+      if (locationResult) {
+        this.weatherCity.set(locationResult.name);
+        this.weatherValidationMessage.set(`Location saved: ${locationResult.name}`);
+        this.weatherValidationType.set('success');
+        
+        // Update config with new location data
+        this.configService.updateWeatherWidget({
+          zipCode: zipCode,
+          city: locationResult.name,
+          latitude: locationResult.latitude,
+          longitude: locationResult.longitude
+        });
+
+        // Update the original value so hasWeatherChanges returns false
+        this.originalWeatherZipCode = zipCode;
+        
+        // Reset editing flag since we've saved
+        this.isEditingWeatherZipCode = false;
+
+        // Clear validation message after a delay
+        setTimeout(() => {
+          this.weatherValidationMessage.set('');
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Weather location validation error:', error);
+      this.weatherValidationMessage.set('Location not found. Please check your zip code.');
+      this.weatherValidationType.set('error');
+    } finally {
+      this.isValidatingWeather = false;
+    }
+  }
+
+  onWeatherCornerChange(corner: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right') {
+    this.configService.updateWeatherWidget({ corner });
   }
 
   formatCorner(corner: QuickLinkConfig['corner']): string {

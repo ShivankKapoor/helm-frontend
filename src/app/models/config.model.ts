@@ -36,11 +36,31 @@ export interface HeroWidgetConfig {
   greetingName: string; // Custom name for greeting (empty = use username)
 }
 
+export interface WeatherWidgetConfig {
+  enabled: boolean; // Global enable/disable for weather widget
+  zipCode: string; // User's zip code for weather location
+  corner: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'; // Corner position
+  city: string; // City name (auto-populated from API)
+  latitude: number; // Latitude (auto-populated from geocoding API)
+  longitude: number; // Longitude (auto-populated from geocoding API)
+  // Cached weather data
+  cachedTemperature?: number; // Last fetched temperature
+  cachedWeatherCode?: number; // Last fetched weather code
+  cachedWeatherDescription?: string; // Last fetched weather description
+  cachedWindSpeed?: number; // Last fetched wind speed
+  cachedWindDirection?: number; // Last fetched wind direction
+  cachedIsDay?: boolean; // Last fetched day/night status
+  lastWeatherUpdate?: string; // ISO timestamp of last weather API call
+  // Rate limiting
+  rateLimitedUntil?: string; // ISO timestamp until when we should avoid API calls due to 429 errors
+}
+
 export interface UserConfig {
   theme: ThemeConfig;
   color: ColorConfig;
   quickLinks: QuickLinksConfig; // Changed from quickLink to quickLinks
   heroWidget: HeroWidgetConfig; // Hero area widget configuration
+  weatherWidget: WeatherWidgetConfig; // Weather widget configuration
   // Future user preferences can go here
   preferences?: {
     language?: string;
@@ -84,6 +104,14 @@ export const DEFAULT_GUEST_CONFIG: AppConfig = {
       clockFormat: '12h',
       showSeconds: false,
       greetingName: ''
+    },
+    weatherWidget: {
+      enabled: false,
+      zipCode: '',
+      corner: 'top-right',
+      city: '',
+      latitude: 0,
+      longitude: 0
     }
   },
   version: '1.0.0',
@@ -106,6 +134,14 @@ export const DEFAULT_USER_CONFIG: AppConfig = {
       clockFormat: '12h',
       showSeconds: false,
       greetingName: ''
+    },
+    weatherWidget: {
+      enabled: false,
+      zipCode: '',
+      corner: 'top-right',
+      city: '',
+      latitude: 0,
+      longitude: 0
     }
   },
   version: '1.0.0',
