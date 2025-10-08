@@ -1270,13 +1270,29 @@ export class SettingsComponent {
         this.weatherValidationMessage.set(`Location saved: ${locationResult.name}`);
         this.weatherValidationType.set('success');
         
-        // Update config with new location data
-        this.configService.updateWeatherWidget({
+        // Update config with new location data AND clear cache in one operation to prevent rapid API calls
+        this.configService.updateWeatherWidgetDebounced({
+          // New location data
           zipCode: zipCode,
           city: locationResult.name,
           latitude: locationResult.latitude,
-          longitude: locationResult.longitude
+          longitude: locationResult.longitude,
+          // Clear cache data
+          lastWeatherUpdate: undefined,
+          cachedTemperature: undefined,
+          cachedWeatherCode: undefined,
+          cachedWeatherDescription: undefined,
+          cachedWindSpeed: undefined,
+          cachedWindDirection: undefined,
+          cachedIsDay: undefined,
+          rateLimitedUntil: undefined
         });
+
+        // Clear ongoing requests and progress flags
+        this.weatherService.clearOngoingRequests();
+        
+        // Fetch fresh weather data for the new location
+        this.weatherService.getWeatherWithCaching(locationResult.latitude, locationResult.longitude, locationResult.name);
 
         // Update the original value so hasWeatherChanges returns false
         this.originalWeatherZipCode = zipCode;

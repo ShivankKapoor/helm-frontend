@@ -20,6 +20,11 @@ export class ConfigService {
   private lastSessionCheck = 0; // Timestamp of last session check
   private readonly SESSION_CHECK_COOLDOWN = 10000; // 10 seconds cooldown between session checks
   
+  // Weather widget update debouncing
+  private weatherWidgetUpdateTimer: any = null;
+  private pendingWeatherWidgetUpdates: Partial<WeatherWidgetConfig> = {};
+  private readonly WEATHER_UPDATE_DEBOUNCE_MS = 1000; // 1 second debounce
+  
   public config$ = this.configSubject.asObservable();
   private accountService: any; // Will be set after construction to avoid circular dependency
 
@@ -742,6 +747,35 @@ export class ConfigService {
     this.updateUserConfig({
       weatherWidget: updatedWeatherWidget
     });
+  }
+
+  /**
+   * Update weather widget configuration with debouncing to prevent rapid API calls
+   * Use this for cache updates and other frequent weather widget updates
+   */
+  updateWeatherWidgetDebounced(weatherWidget: Partial<WeatherWidgetConfig>): void {
+    // Merge with pending updates
+    this.pendingWeatherWidgetUpdates = {
+      ...this.pendingWeatherWidgetUpdates,
+      ...weatherWidget
+    };
+
+    // Clear existing timer
+    if (this.weatherWidgetUpdateTimer) {
+      clearTimeout(this.weatherWidgetUpdateTimer);
+    }
+
+    // Set new timer
+    this.weatherWidgetUpdateTimer = setTimeout(() => {
+      console.log('🔄 Applying debounced weather widget updates:', this.pendingWeatherWidgetUpdates);
+      
+      // Apply all pending updates at once
+      this.updateWeatherWidget(this.pendingWeatherWidgetUpdates);
+      
+      // Clear pending updates
+      this.pendingWeatherWidgetUpdates = {};
+      this.weatherWidgetUpdateTimer = null;
+    }, this.WEATHER_UPDATE_DEBOUNCE_MS);
   }
 
   /**

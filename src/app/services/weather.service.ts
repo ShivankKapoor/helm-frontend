@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, throwError, of } from 'rxjs';
-import { catchError, map, switchMap, retry, shareReplay } from 'rxjs/operators';
+import { catchError, map, switchMap, retry, shareReplay, share, finalize, tap } from 'rxjs/operators';
 
 export interface GeocodeResult {
   name: string;
@@ -49,6 +49,14 @@ export class WeatherService {
   
   // Cache duration: 15 minutes
   private readonly CACHE_DURATION_MS = 15 * 60 * 1000; // 15 minutes in milliseconds
+
+  // Track ongoing requests to prevent duplicates and rate limiting
+  private ongoingWeatherRequest: Observable<WeatherInfo> | null = null;
+  private ongoingGeocodingRequest: Observable<GeocodeResult> | null = null;
+  
+  // Global request blocking to prevent multiple simultaneous API calls
+  private isWeatherRequestInProgress = false;
+  private isGeocodingRequestInProgress = false;
   
   private weatherDataSubject = new BehaviorSubject<WeatherInfo | null>(null);
   private errorSubject = new BehaviorSubject<string | null>(null);
@@ -104,7 +112,8 @@ export class WeatherService {
     
     console.log('🚫 Rate limited - API calls blocked until:', rateLimitedUntil.toISOString());
     
-    this.configService.updateWeatherWidget({
+    // Use debounced update for rate limiting to prevent rapid API calls
+    this.configService.updateWeatherWidgetDebounced({
       rateLimitedUntil: rateLimitedUntil.toISOString(),
       lastWeatherUpdate: new Date().toISOString() // Update timestamp to prevent immediate retries
     });
@@ -137,9 +146,10 @@ export class WeatherService {
   private saveWeatherToCache(weatherInfo: WeatherInfo): void {
     if (!this.configService) return;
 
-    console.log('💾 Saving weather data to cache:', weatherInfo);
+    console.log('💾 Saving weather data to cache (debounced):', weatherInfo);
     
-    this.configService.updateWeatherWidget({
+    // Use debounced update to prevent rapid API calls to helmseek
+    this.configService.updateWeatherWidgetDebounced({
       cachedTemperature: weatherInfo.temperature,
       cachedWeatherCode: weatherInfo.weatherCode,
       cachedWeatherDescription: weatherInfo.weatherDescription,
@@ -154,14 +164,21 @@ export class WeatherService {
    * Get geocoding information from zip code
    */
   getLocationFromZipCode(zipCode: string): Observable<GeocodeResult> {
-    console.log('🌍 Geocoding API called for zip code:', zipCode);
+    // If there's already an ongoing request for this zip code, return it
+    if (this.ongoingGeocodingRequest) {
+      console.log('🔄 Reusing ongoing geocoding request to prevent duplicate API calls');
+      return this.ongoingGeocodingRequest;
+    }
+
+    console.log('🌍 Starting new geocoding API request for zip code:', zipCode);
     this.isLoadingSubject.next(true);
     this.errorSubject.next(null);
     
     // Get multiple results to find US locations first
     const url = `${this.GEOCODING_API}?name=${encodeURIComponent(zipCode)}&count=10`;
     
-    return this.http.get<{ results?: GeocodeResult[] }>(url).pipe(
+    // Create and cache the request
+    this.ongoingGeocodingRequest = this.http.get<{ results?: GeocodeResult[] }>(url).pipe(
       map(response => {
         if (!response.results || response.results.length === 0) {
           throw new Error(`No location found for zip code: ${zipCode}`);
@@ -205,20 +222,39 @@ export class WeatherService {
         this.errorSubject.next(errorMessage);
         this.isLoadingSubject.next(false);
         return throwError(() => new Error(errorMessage));
-      })
+      }),
+      finalize(() => {
+        // Clear the ongoing request when it completes (success or error)
+        console.log('✅ Geocoding API request completed, clearing ongoing request cache');
+        this.ongoingGeocodingRequest = null;
+      }),
+      share() // Share the observable among multiple subscribers
     );
+
+    return this.ongoingGeocodingRequest;
   }
 
   /**
    * Get current weather data from coordinates
    */
   getCurrentWeather(latitude: number, longitude: number, city: string): Observable<WeatherInfo> {
+    // Create a unique key for this request
+    const requestKey = `${latitude}-${longitude}-${city}`;
+    
+    // If there's already an ongoing request for this location, return it
+    if (this.ongoingWeatherRequest) {
+      console.log('🔄 Reusing ongoing weather request to prevent duplicate API calls');
+      return this.ongoingWeatherRequest;
+    }
+
+    console.log('🌐 Starting new weather API request for:', requestKey);
     this.isLoadingSubject.next(true);
     this.errorSubject.next(null);
     
     const url = `${this.WEATHER_API}?latitude=${latitude}&longitude=${longitude}&current_weather=true&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch`;
     
-    return this.http.get<WeatherData>(url).pipe(
+    // Create and cache the request
+    this.ongoingWeatherRequest = this.http.get<WeatherData>(url).pipe(
       map(response => {
         if (!response.current_weather) {
           throw new Error('Invalid weather data received');
@@ -256,8 +292,16 @@ export class WeatherService {
         this.errorSubject.next(errorMessage);
         this.isLoadingSubject.next(false);
         return throwError(() => new Error(errorMessage));
-      })
+      }),
+      finalize(() => {
+        // Clear the ongoing request when it completes (success or error)
+        console.log('✅ Weather API request completed, clearing ongoing request cache');
+        this.ongoingWeatherRequest = null;
+      }),
+      share() // Share the observable among multiple subscribers
     );
+
+    return this.ongoingWeatherRequest;
   }
 
   /**
@@ -317,6 +361,18 @@ export class WeatherService {
       return;
     }
 
+    // Check if a weather request is already in progress
+    if (this.isWeatherRequestInProgress) {
+      console.log('⏳ Weather request already in progress, ignoring duplicate request');
+      // Use cached data if available, otherwise just show loading state
+      const cachedWeatherInfo = this.createWeatherInfoFromCache(currentConfig);
+      if (cachedWeatherInfo) {
+        this.weatherDataSubject.next(cachedWeatherInfo);
+        this.errorSubject.next(null);
+      }
+      return;
+    }
+
     // Check if we have valid cached data
     if (this.isCacheValid(weatherConfig?.lastWeatherUpdate)) {
       console.log('✅ Using cached weather data (cache is valid)');
@@ -333,6 +389,9 @@ export class WeatherService {
     console.log('🌐 Cache expired or missing, fetching fresh weather data...');
     this.isLoadingSubject.next(true);
     this.errorSubject.next(null);
+    
+    // Set the global progress flag to prevent duplicate requests
+    this.isWeatherRequestInProgress = true;
 
     this.getCurrentWeather(latitude, longitude, city).subscribe({
       next: (weatherInfo) => {
@@ -341,11 +400,13 @@ export class WeatherService {
         this.weatherDataSubject.next(weatherInfo);
         this.isLoadingSubject.next(false);
         this.errorSubject.next(null);
+        this.isWeatherRequestInProgress = false; // Clear progress flag
       },
       error: (error) => {
         console.error('Weather API error:', error);
         this.errorSubject.next(error.message || 'Failed to fetch weather data');
         this.isLoadingSubject.next(false);
+        this.isWeatherRequestInProgress = false; // Clear progress flag
         
         // Try to fall back to cached data even if expired
         const cachedWeatherInfo = this.createWeatherInfoFromCache(currentConfig);
@@ -415,12 +476,16 @@ export class WeatherService {
       return;
     }
 
-    console.log('🗑️ Clearing weather cache and rate limiting - next request will fetch fresh data');
+    console.log('🗑️ Clearing weather cache, rate limiting, and ongoing requests - next request will fetch fresh data');
+    
+    // Clear any ongoing requests and progress flags
+    this.clearOngoingRequests();
     
     // Clear cached weather data and rate limiting from config
     const currentConfig = this.configService.currentConfig;
     if (currentConfig?.user?.weatherWidget) {
-      this.configService.updateWeatherWidget({
+      // Use debounced update for cache clearing to prevent rapid API calls
+      this.configService.updateWeatherWidgetDebounced({
         lastWeatherUpdate: undefined,
         cachedTemperature: undefined,
         cachedWeatherCode: undefined,
@@ -432,6 +497,17 @@ export class WeatherService {
         rateLimitedUntil: undefined // Clear rate limiting status
       });
     }
+  }
+
+  /**
+   * Clear ongoing requests and progress flags without updating config
+   */
+  clearOngoingRequests(): void {
+    this.ongoingWeatherRequest = null;
+    this.ongoingGeocodingRequest = null;
+    this.isWeatherRequestInProgress = false;
+    this.isGeocodingRequestInProgress = false;
+    console.log('🧹 Cleared ongoing requests and progress flags');
   }
 
   /**
