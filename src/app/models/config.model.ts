@@ -39,7 +39,7 @@ export interface HeroWidgetConfig {
 export interface WeatherWidgetConfig {
   enabled: boolean; // Global enable/disable for weather widget
   zipCode: string; // User's zip code for weather location
-  corner: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'; // Corner position
+  corner: 'top-left' | 'top-right' | 'bottom-left'; // Corner position (bottom-right reserved for settings)
   city: string; // City name (auto-populated from API)
   latitude: number; // Latitude (auto-populated from geocoding API)
   longitude: number; // Longitude (auto-populated from geocoding API)

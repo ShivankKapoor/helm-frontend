@@ -203,6 +203,12 @@ import { QuickLinkSettingsComponent } from '../quick-link-settings/quick-link-se
                             <span>{{ pos.short }}</span>
                           </button>
                         }
+                        <!-- Note: Bottom-right is reserved for Settings & Account buttons -->
+                        <div class="weather-reserved-position">
+                          <i class="bi bi-gear-fill"></i>
+                          <span>Reserved</span>
+                          <small>Settings</small>
+                        </div>
                       </div>
                       <small class="setting-hint">Choose where the weather widget appears on your screen</small>
                       
@@ -834,6 +840,29 @@ import { QuickLinkSettingsComponent } from '../quick-link-settings/quick-link-se
       font-size: 1.2rem;
     }
     
+    .weather-reserved-position {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 12px 8px;
+      border: 2px solid var(--border-color-disabled, #ccc);
+      border-radius: 8px;
+      background: var(--bg-disabled, #f5f5f5);
+      color: var(--text-disabled, #999);
+      font-size: 0.8rem;
+      opacity: 0.6;
+    }
+    
+    .weather-reserved-position i {
+      font-size: 1.2rem;
+    }
+    
+    .weather-reserved-position small {
+      font-size: 0.7rem;
+      margin-top: 2px;
+    }
+    
     .weather-preview-section {
       margin-top: 1rem;
     }
@@ -986,6 +1015,12 @@ import { QuickLinkSettingsComponent } from '../quick-link-settings/quick-link-se
       color: white;
     }
     
+    :host-context(.dark) .weather-reserved-position {
+      background: var(--bg-disabled, #2a2a2a);
+      border-color: var(--border-color-disabled, #444);
+      color: var(--text-disabled, #666);
+    }
+    
     :host-context(.dark) .location-info {
       background: rgba(40, 167, 69, 0.2);
       border-color: rgba(40, 167, 69, 0.3);
@@ -1068,7 +1103,7 @@ export class SettingsComponent {
   weatherZipCode = '';
   originalWeatherZipCode = ''; // Track original value to detect changes
   isEditingWeatherZipCode = false; // Track if user is actively editing
-  weatherCorner: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' = 'top-right';
+  weatherCorner: 'top-left' | 'top-right' | 'bottom-left' = 'top-right';
   weatherCity = signal('');
   weatherValidationMessage = signal('');
   weatherValidationType = signal<'success' | 'error' | 'info'>('info');
@@ -1077,8 +1112,8 @@ export class SettingsComponent {
   weatherPositions = [
     { value: 'top-left' as const, label: 'Top Left', short: 'TL', icon: 'bi bi-arrow-up-left' },
     { value: 'top-right' as const, label: 'Top Right', short: 'TR', icon: 'bi bi-arrow-up-right' },
-    { value: 'bottom-left' as const, label: 'Bottom Left', short: 'BL', icon: 'bi bi-arrow-down-left' },
-    { value: 'bottom-right' as const, label: 'Bottom Right', short: 'BR', icon: 'bi bi-arrow-down-right' }
+    { value: 'bottom-left' as const, label: 'Bottom Left', short: 'BL', icon: 'bi bi-arrow-down-left' }
+    // bottom-right removed - reserved for settings and account buttons
   ];
 
   constructor() {
@@ -1113,7 +1148,16 @@ export class SettingsComponent {
           this.originalWeatherZipCode = config.user.weatherWidget.zipCode; // Track original value
         }
         
-        this.weatherCorner = config.user.weatherWidget.corner;
+        // Migrate bottom-right to top-right (reserved for settings)
+        const configCorner = config.user.weatherWidget.corner;
+        this.weatherCorner = (configCorner as string) === 'bottom-right' ? 'top-right' : configCorner;
+        
+        // If migration occurred, update the config
+        if ((configCorner as string) === 'bottom-right') {
+          console.log('Migrating weather widget from bottom-right to top-right (reserved for settings)');
+          this.configService.updateWeatherWidget({ corner: 'top-right' });
+        }
+        
         this.weatherCity.set(config.user.weatherWidget.city);
       }
     });
@@ -1314,7 +1358,7 @@ export class SettingsComponent {
     }
   }
 
-  onWeatherCornerChange(corner: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right') {
+  onWeatherCornerChange(corner: 'top-left' | 'top-right' | 'bottom-left') {
     this.configService.updateWeatherWidget({ corner });
   }
 
