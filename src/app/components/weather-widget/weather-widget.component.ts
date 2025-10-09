@@ -328,10 +328,11 @@ export class WeatherWidgetComponent implements OnInit, OnDestroy {
       if (this.isEnabled() && weatherConfig.zipCode) {
         // Check if we have saved coordinates
         if (weatherConfig.latitude && weatherConfig.longitude && weatherConfig.city) {
-          // If zip code changed, force a fresh API call by clearing cache first
+          // If zip code changed, force a fresh API call by clearing cache and ongoing requests
           if (zipCodeChanged) {
             console.log('🔄 Zip code changed from', this.previousZipCode, 'to', currentZipCode, '- forcing fresh weather data');
             this.weatherService.clearWeatherCache();
+            this.weatherService.clearOngoingRequests();
           }
           
           // Use saved coordinates with smart caching (or forced refresh if zip changed)
@@ -401,8 +402,9 @@ export class WeatherWidgetComponent implements OnInit, OnDestroy {
     try {
       console.log('🗺️ Geocoding zip code:', zipCode);
       
-      // Clear cache for fresh data with new location
+      // Clear cache and ongoing requests for fresh data with new location
       this.weatherService.clearWeatherCache();
+      this.weatherService.clearOngoingRequests();
       
       const locationResult = await this.weatherService.getLocationFromZipCode(zipCode).toPromise();
       if (locationResult) {

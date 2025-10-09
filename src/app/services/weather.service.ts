@@ -58,6 +58,10 @@ export class WeatherService {
   private isWeatherRequestInProgress = false;
   private isGeocodingRequestInProgress = false;
   
+  // Network and offline handling
+  private isOnline = navigator.onLine;
+  private retryTimeouts: Set<any> = new Set();
+  
   private weatherDataSubject = new BehaviorSubject<WeatherInfo | null>(null);
   private errorSubject = new BehaviorSubject<string | null>(null);
   private isLoadingSubject = new BehaviorSubject<boolean>(false);
@@ -73,6 +77,54 @@ export class WeatherService {
    */
   setConfigService(configService: any): void {
     this.configService = configService;
+    this.initializeNetworkMonitoring();
+  }
+
+  /**
+   * Initialize network status monitoring
+   */
+  private initializeNetworkMonitoring(): void {
+    // Listen for online/offline events
+    window.addEventListener('online', () => {
+      console.log('🌐 Network connection restored');
+      this.isOnline = true;
+      this.handleNetworkReconnection();
+    });
+    
+    window.addEventListener('offline', () => {
+      console.log('📵 Network connection lost');
+      this.isOnline = false;
+      this.clearRetryTimeouts();
+    });
+  }
+
+  /**
+   * Handle network reconnection - retry failed requests
+   */
+  private handleNetworkReconnection(): void {
+    if (!this.configService) return;
+    
+    const config = this.configService.currentConfig;
+    const weatherConfig = config?.user?.weatherWidget;
+    
+    // If we have location data but no recent weather data, try to refresh
+    if (weatherConfig?.latitude && weatherConfig?.longitude && weatherConfig?.city) {
+      const hasRecentData = this.isCacheValid(weatherConfig.lastWeatherUpdate);
+      if (!hasRecentData) {
+        console.log('🔄 Network restored - attempting to refresh weather data');
+        setTimeout(() => {
+          this.getWeatherWithCaching(weatherConfig.latitude, weatherConfig.longitude, weatherConfig.city);
+        }, 1000); // Small delay to ensure network is stable
+      }
+    }
+  }
+
+  /**
+   * Clear all retry timeouts
+   */
+  private clearRetryTimeouts(): void {
+    this.retryTimeouts.forEach(timeout => clearTimeout(timeout));
+    this.retryTimeouts.clear();
   }
 
   /**
@@ -117,6 +169,201 @@ export class WeatherService {
       rateLimitedUntil: rateLimitedUntil.toISOString(),
       lastWeatherUpdate: new Date().toISOString() // Update timestamp to prevent immediate retries
     });
+  }
+
+  /**
+   * Handle weather API errors with intelligent fallback and retry logic
+   */
+  private handleWeatherApiError(error: any, latitude: number, longitude: number, city: string): Observable<WeatherInfo> {
+    this.isLoadingSubject.next(false);
+    
+    // Check if we're offline
+    if (!this.isOnline || error.status === 0) {
+      console.log('📵 Offline or network error - using cached data and scheduling retry');
+      return this.handleOfflineError(latitude, longitude, city);
+    }
+    
+    // Handle specific HTTP status codes
+    switch (error.status) {
+      case 429:
+        console.warn('🚫 Weather API rate limit exceeded (429) - setting rate limit timeout');
+        this.setRateLimit();
+        return this.handleRateLimitError();
+        
+      case 500:
+      case 502:
+      case 503:
+      case 504:
+        console.warn('🔧 Weather API server error - using cached data and scheduling retry');
+        return this.handleServerError(latitude, longitude, city);
+        
+      case 400:
+      case 404:
+        console.error('❌ Weather API client error - invalid request');
+        return this.handleClientError(error);
+        
+      default:
+        console.warn('⚠️ Unexpected weather API error - using cached data');
+        return this.handleGenericError(error, latitude, longitude, city);
+    }
+  }
+
+  /**
+   * Handle offline/network errors
+   */
+  private handleOfflineError(latitude: number, longitude: number, city: string): Observable<WeatherInfo> {
+    const cachedData = this.getCachedWeatherData();
+    if (cachedData) {
+      this.weatherDataSubject.next(cachedData);
+      this.errorSubject.next('Using offline data - will refresh when online');
+      console.log('📱 Using cached data while offline');
+      return of(cachedData);
+    } else {
+      const errorMessage = 'No internet connection and no cached weather data available';
+      this.errorSubject.next(errorMessage);
+      return throwError(() => new Error(errorMessage));
+    }
+  }
+
+  /**
+   * Handle rate limiting errors
+   */
+  private handleRateLimitError(): Observable<WeatherInfo> {
+    const cachedData = this.getCachedWeatherData();
+    if (cachedData) {
+      this.weatherDataSubject.next(cachedData);
+      this.errorSubject.next('Rate limit reached - using cached data');
+      return of(cachedData);
+    } else {
+      const errorMessage = 'Weather API rate limit exceeded. Please try again later.';
+      this.errorSubject.next(errorMessage);
+      return throwError(() => new Error(errorMessage));
+    }
+  }
+
+  /**
+   * Handle server errors (5xx) - schedule retry
+   */
+  private handleServerError(latitude: number, longitude: number, city: string): Observable<WeatherInfo> {
+    const cachedData = this.getCachedWeatherData();
+    if (cachedData) {
+      this.weatherDataSubject.next(cachedData);
+      this.errorSubject.next('Weather service temporarily unavailable - using cached data');
+      
+      // Schedule a retry in 5 minutes
+      this.scheduleRetry(latitude, longitude, city, 5 * 60 * 1000);
+      
+      return of(cachedData);
+    } else {
+      const errorMessage = 'Weather service temporarily unavailable. Please try again later.';
+      this.errorSubject.next(errorMessage);
+      
+      // Still schedule a retry even without cached data
+      this.scheduleRetry(latitude, longitude, city, 5 * 60 * 1000);
+      
+      return throwError(() => new Error(errorMessage));
+    }
+  }
+
+  /**
+   * Handle client errors (4xx) - usually permanent
+   */
+  private handleClientError(error: any): Observable<WeatherInfo> {
+    const errorMessage = 'Invalid weather request. Please check your location settings.';
+    this.errorSubject.next(errorMessage);
+    return throwError(() => new Error(errorMessage));
+  }
+
+  /**
+   * Handle generic errors
+   */
+  private handleGenericError(error: any, latitude: number, longitude: number, city: string): Observable<WeatherInfo> {
+    const cachedData = this.getCachedWeatherData();
+    if (cachedData) {
+      this.weatherDataSubject.next(cachedData);
+      this.errorSubject.next('Weather update failed - using cached data');
+      
+      // Schedule a retry in 2 minutes for generic errors
+      this.scheduleRetry(latitude, longitude, city, 2 * 60 * 1000);
+      
+      return of(cachedData);
+    } else {
+      const errorMessage = error.message || 'Failed to fetch weather data';
+      this.errorSubject.next(errorMessage);
+      return throwError(() => new Error(errorMessage));
+    }
+  }
+
+  /**
+   * Get cached weather data if available
+   */
+  private getCachedWeatherData(): WeatherInfo | null {
+    if (!this.configService) return null;
+    
+    const currentConfig = this.configService.currentConfig;
+    return this.createWeatherInfoFromCache(currentConfig);
+  }
+
+  /**
+   * Schedule a retry attempt after a delay
+   */
+  private scheduleRetry(latitude: number, longitude: number, city: string, delayMs: number): void {
+    console.log(`⏰ Scheduling weather retry in ${delayMs / 1000} seconds`);
+    
+    const timeout = setTimeout(() => {
+      this.retryTimeouts.delete(timeout);
+      
+      // Only retry if we're online and not rate limited
+      if (this.isOnline && !this.isRateLimited(this.configService?.currentConfig?.user?.weatherWidget?.rateLimitedUntil)) {
+        console.log('🔄 Attempting scheduled weather retry');
+        this.getWeatherWithCaching(latitude, longitude, city);
+      }
+    }, delayMs);
+    
+    this.retryTimeouts.add(timeout);
+  }
+
+  /**
+   * Handle geocoding API errors
+   */
+  private handleGeocodingApiError(error: any): Observable<GeocodeResult> {
+    this.isLoadingSubject.next(false);
+    
+    // Check if we're offline
+    if (!this.isOnline || error.status === 0) {
+      const errorMessage = 'No internet connection. Please check your network and try again.';
+      this.errorSubject.next(errorMessage);
+      return throwError(() => new Error(errorMessage));
+    }
+    
+    // Handle specific HTTP status codes
+    switch (error.status) {
+      case 429:
+        console.warn('🚫 Geocoding API rate limit exceeded (429) - setting rate limit timeout');
+        this.setRateLimit();
+        const rateLimitMessage = 'Geocoding API rate limit exceeded. Please try again later.';
+        this.errorSubject.next(rateLimitMessage);
+        return throwError(() => new Error(rateLimitMessage));
+        
+      case 500:
+      case 502:
+      case 503:
+      case 504:
+        const serverErrorMessage = 'Location service temporarily unavailable. Please try again later.';
+        this.errorSubject.next(serverErrorMessage);
+        return throwError(() => new Error(serverErrorMessage));
+        
+      case 400:
+      case 404:
+        const notFoundMessage = 'Location not found. Please check your zip code and try again.';
+        this.errorSubject.next(notFoundMessage);
+        return throwError(() => new Error(notFoundMessage));
+        
+      default:
+        const genericMessage = error.message || 'Failed to find location';
+        this.errorSubject.next(genericMessage);
+        return throwError(() => new Error(genericMessage));
+    }
   }
 
   /**
@@ -204,24 +451,11 @@ export class WeatherService {
         // Return the first result if not a US zip code or no US result found
         return response.results[0];
       }),
-      retry(2),
+      retry(1), // Only retry once as requested
       catchError(error => {
         console.error('Geocoding error:', error);
         
-        // Handle 429 Too Many Requests specifically
-        if (error.status === 429) {
-          console.warn('🚫 Geocoding API rate limit exceeded (429) - setting rate limit timeout');
-          this.setRateLimit();
-          const errorMessage = 'Geocoding API rate limit exceeded. Please try again later.';
-          this.errorSubject.next(errorMessage);
-          this.isLoadingSubject.next(false);
-          return throwError(() => new Error(errorMessage));
-        }
-        
-        const errorMessage = error.message || 'Failed to find location';
-        this.errorSubject.next(errorMessage);
-        this.isLoadingSubject.next(false);
-        return throwError(() => new Error(errorMessage));
+        return this.handleGeocodingApiError(error);
       }),
       finalize(() => {
         // Clear the ongoing request when it completes (success or error)
@@ -274,24 +508,11 @@ export class WeatherService {
           lastUpdated: new Date()
         };
       }),
-      retry(2),
+      retry(1), // Only retry once as requested
       catchError(error => {
         console.error('Weather API error:', error);
         
-        // Handle 429 Too Many Requests specifically
-        if (error.status === 429) {
-          console.warn('🚫 Weather API rate limit exceeded (429) - setting rate limit timeout');
-          this.setRateLimit();
-          const errorMessage = 'Weather API rate limit exceeded. Please try again later.';
-          this.errorSubject.next(errorMessage);
-          this.isLoadingSubject.next(false);
-          return throwError(() => new Error(errorMessage));
-        }
-        
-        const errorMessage = error.message || 'Failed to fetch weather data';
-        this.errorSubject.next(errorMessage);
-        this.isLoadingSubject.next(false);
-        return throwError(() => new Error(errorMessage));
+        return this.handleWeatherApiError(error, latitude, longitude, city);
       }),
       finalize(() => {
         // Clear the ongoing request when it completes (success or error)
@@ -507,7 +728,9 @@ export class WeatherService {
     this.ongoingGeocodingRequest = null;
     this.isWeatherRequestInProgress = false;
     this.isGeocodingRequestInProgress = false;
-    console.log('🧹 Cleared ongoing requests and progress flags');
+    // Reset loading state to prevent stuck loading indicators
+    this.isLoadingSubject.next(false);
+    console.log('🧹 Cleared ongoing requests, progress flags, and reset loading state');
   }
 
   /**

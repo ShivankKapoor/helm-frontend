@@ -1277,7 +1277,7 @@ export class SettingsComponent {
           city: locationResult.name,
           latitude: locationResult.latitude,
           longitude: locationResult.longitude,
-          // Clear cache data
+          // Clear cache data to force fresh fetch
           lastWeatherUpdate: undefined,
           cachedTemperature: undefined,
           cachedWeatherCode: undefined,
@@ -1288,11 +1288,11 @@ export class SettingsComponent {
           rateLimitedUntil: undefined
         });
 
-        // Clear ongoing requests and progress flags
+        // Clear ongoing requests and progress flags to ensure clean state
         this.weatherService.clearOngoingRequests();
         
-        // Fetch fresh weather data for the new location
-        this.weatherService.getWeatherWithCaching(locationResult.latitude, locationResult.longitude, locationResult.name);
+        // Let the weather widget component handle the weather update through config subscription
+        // No need to call weatherService.getWeatherWithCaching() here as it causes duplicate requests
 
         // Update the original value so hasWeatherChanges returns false
         this.originalWeatherZipCode = zipCode;
