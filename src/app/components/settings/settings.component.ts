@@ -152,7 +152,7 @@ import { QuickLinkSettingsComponent } from '../quick-link-settings/quick-link-se
                           (ngModelChange)="onWeatherZipCodeInput($event)"
                           (focus)="onWeatherZipCodeFocus()"
                           (blur)="onWeatherZipCodeBlur()"
-                          placeholder="Enter zip code (e.g., 75035)"
+                          placeholder="Enter zip code (e.g., 90210)"
                           maxlength="10"
                         >
                         <button 
