@@ -85,7 +85,8 @@ export const DEFAULT_COLOR_OPTIONS: ColorOption[] = [
   { name: 'Red', value: '#ea4335,#b03a2e', bg: '#ea4335', hover: '#b03a2e' },
   { name: 'Purple', value: '#9B59B6,#6B3F87', bg: '#9B59B6', hover: '#6B3F87' },
   { name: 'Teal', value: '#3B7F70,#0A5F50', bg: '#3B7F70', hover: '#0A5F50' },
-  { name: 'Orange', value: '#FF6720,#CC4F00', bg: '#FF6720', hover: '#CC4F00' }
+  { name: 'Orange', value: '#FF6720,#CC4F00', bg: '#FF6720', hover: '#CC4F00' },
+  { name: 'Maroon', value: '#8B0000,#A52A2A', bg: '#8B0000', hover: '#A52A2A' }
 ];
 
 // Default configurations
