@@ -188,14 +188,24 @@ import { WeatherWidgetConfig } from '../../models/config.model';
         min-width: 100px;
       }
       
-      .position-top-left,
-      .position-top-right,
-      .position-bottom-left,
-      .position-bottom-right {
+      .position-top-left {
         top: 15px;
         left: 15px;
+      }
+      
+      .position-top-right {
+        top: 15px;
         right: 15px;
+      }
+      
+      .position-bottom-left {
         bottom: 15px;
+        left: 15px;
+      }
+      
+      .position-bottom-right {
+        bottom: 15px;
+        right: 15px;
       }
       
       .weather-content {
@@ -229,14 +239,24 @@ import { WeatherWidgetConfig } from '../../models/config.model';
         min-width: 90px;
       }
       
-      .position-top-left,
-      .position-top-right,
-      .position-bottom-left,
-      .position-bottom-right {
+      .position-top-left {
         top: 10px;
         left: 10px;
+      }
+      
+      .position-top-right {
+        top: 10px;
         right: 10px;
+      }
+      
+      .position-bottom-left {
         bottom: 10px;
+        left: 10px;
+      }
+      
+      .position-bottom-right {
+        bottom: 10px;
+        right: 10px;
       }
       
       .weather-content {
