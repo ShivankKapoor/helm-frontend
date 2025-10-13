@@ -2,7 +2,7 @@ import { Injectable, signal, Inject, forwardRef } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, of } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
-import { AppConfig, DEFAULT_GUEST_CONFIG, DEFAULT_USER_CONFIG, UserConfig, QuickLinkConfig, QuickLinksConfig, HeroWidgetConfig } from '../models/config.model';
+import { AppConfig, DEFAULT_GUEST_CONFIG, DEFAULT_USER_CONFIG, UserConfig, QuickLinkConfig, QuickLinksConfig, HeroWidgetConfig, WeatherWidgetConfig } from '../models/config.model';
 
 @Injectable({
   providedIn: 'root'
@@ -19,6 +19,11 @@ export class ConfigService {
   private isSyncing = false; // Guard to prevent multiple concurrent sync operations
   private lastSessionCheck = 0; // Timestamp of last session check
   private readonly SESSION_CHECK_COOLDOWN = 10000; // 10 seconds cooldown between session checks
+  
+  // Weather widget update debouncing
+  private weatherWidgetUpdateTimer: any = null;
+  private pendingWeatherWidgetUpdates: Partial<WeatherWidgetConfig> = {};
+  private readonly WEATHER_UPDATE_DEBOUNCE_MS = 1000; // 1 second debounce
   
   public config$ = this.configSubject.asObservable();
   private accountService: any; // Will be set after construction to avoid circular dependency
@@ -525,6 +530,10 @@ export class ConfigService {
         heroWidget: {
           ...defaults.user.heroWidget,
           ...config.user?.heroWidget
+        },
+        weatherWidget: {
+          ...defaults.user.weatherWidget,
+          ...config.user?.weatherWidget
         }
       }
     };
@@ -723,6 +732,62 @@ export class ConfigService {
       enabled
     };
     this.updateQuickLinks(updatedQuickLinks);
+  }
+
+  /**
+   * Update weather widget configuration
+   */
+  updateWeatherWidget(weatherWidget: Partial<WeatherWidgetConfig>): void {
+    const currentConfig = this.currentConfig;
+    const updatedWeatherWidget = {
+      ...currentConfig.user.weatherWidget,
+      ...weatherWidget
+    };
+    
+    this.updateUserConfig({
+      weatherWidget: updatedWeatherWidget
+    });
+  }
+
+  /**
+   * Update weather widget configuration with debouncing to prevent rapid API calls
+   * Use this for cache updates and other frequent weather widget updates
+   */
+  updateWeatherWidgetDebounced(weatherWidget: Partial<WeatherWidgetConfig>): void {
+    // Merge with pending updates
+    this.pendingWeatherWidgetUpdates = {
+      ...this.pendingWeatherWidgetUpdates,
+      ...weatherWidget
+    };
+
+    // Clear existing timer
+    if (this.weatherWidgetUpdateTimer) {
+      clearTimeout(this.weatherWidgetUpdateTimer);
+    }
+
+    // Set new timer
+    this.weatherWidgetUpdateTimer = setTimeout(() => {
+      console.log('🔄 Applying debounced weather widget updates:', this.pendingWeatherWidgetUpdates);
+      
+      // Apply all pending updates at once
+      this.updateWeatherWidget(this.pendingWeatherWidgetUpdates);
+      
+      // Clear pending updates
+      this.pendingWeatherWidgetUpdates = {};
+      this.weatherWidgetUpdateTimer = null;
+    }, this.WEATHER_UPDATE_DEBOUNCE_MS);
+  }
+
+  /**
+   * Toggle weather widget enabled state
+   */
+  toggleWeatherWidget(enabled: boolean): void {
+    const currentConfig = this.currentConfig;
+    const updatedWeatherWidget: WeatherWidgetConfig = {
+      ...currentConfig.user.weatherWidget,
+      enabled
+    };
+    this.updateWeatherWidget(updatedWeatherWidget);
   }
 
   /**
